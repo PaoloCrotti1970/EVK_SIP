@@ -1,0 +1,36 @@
+PE 100,2     #VD_min
+PE 104,4     #VD_max
+PE 108,-2    #VgGAAS_min
+PE 112,-0.3  #Vc_SIGE_max
+PE 116,0     #Vif_min
+PE 120,2     #Vif_max
+PE 124,0     #Vref_cloop_min
+PE 128,2.4   #Vref_cloop_max
+PE 132,-2    #Vg_pa_min
+PE 136,-0.3  #Vg_pa_max
+PE 140,2
+PE 144,2
+PE 148,2
+PE 152,2
+PE 156,2
+PE 160,-2
+PE 164,-2
+PE 168,-2
+PE 172,-2
+PE 176,-2
+PE 180,-2
+PE 184,-2
+PE 188,-2
+PE 192,-2
+PE 196,0
+PE 200,0
+PE 204,0
+PE 208,0
+PE 212,0
+PE 216,0
+PE 220,0
+PE 224,0
+PE 228,-2
+PE 232,-2
+PE 236,-2
+PE 240,-2
