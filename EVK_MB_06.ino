@@ -18,8 +18,8 @@ AD_4_IO7_Vread,
 #include <EEPROM.h>
 #include <SPI.h>
 
-char *FW = "FW_10000-06";
-char *prompt = ">";
+const char *FW = "FW_10000-7";
+const char *prompt = ">";
 String command = "";
 byte c = 0x00;
 
@@ -622,7 +622,8 @@ void setup() {
       int i = seq[a];
       double vout;
       EEPROM.get((140+(a*4)), vout);
-//      Serial.print(seq_label[a]); Serial.print(" = "); Serial.println(vout);    
+      //Serial.print(seq_label[a]); Serial.print(" = "); Serial.println(vout);
+      Serial.print(seq[a]); Serial.print(" = "); Serial.println(vout);  
       if (vout >= array_set_reg_LL[i] && vout <= array_set_reg_LH[i]) {  
         double ofs = read_ofs(i);         
         double k = read_k(i); 
@@ -1838,48 +1839,78 @@ void e2prom_put (int address, double data){
   e2prom_write_page (start_add_page, buffer_read);
 }
 
-void e2prom_write_page (int address, byte data_page[page_size]){
-  digitalWrite(e2prom_CE ,LOW);
-  SPI.transfer(EEPROM_WRITE_ENABLE); //write enable
-  digitalWrite(e2prom_CE, HIGH);
-  delay(5);
-  byte buffer_write[page_size];
-  for (int i=0; i<page_size; i++){
-    buffer_write[i] = data_page[i];
-  }
+//void e2prom_write_page (int address, byte data_page[page_size]){
+//  digitalWrite(e2prom_CE ,LOW);
+//  SPI.transfer(EEPROM_WRITE_ENABLE); //write enable
+//  digitalWrite(e2prom_CE, HIGH);
+//  delay(5);
+//  byte buffer_write[page_size];
+//  for (int i=0; i<page_size; i++){
+//    buffer_write[i] = data_page[i];
+//  }
+//  digitalWrite(e2prom_CE, LOW);
+//  SPI.transfer(EEPROM_WRITE_MEMORY_ARRAY); //write instruction
+//  SPI.transfer((char)(address>>8));  //send MSByte address first
+//  SPI.transfer((char)(address)); //send LSByte address
+//  for (int I=0; I<page_size; I++){
+//    SPI.transfer(buffer_write[I]);//write data byte
+//    delay(5);
+//  }
+//  digitalWrite(e2prom_CE, HIGH);
+//  //wait for eeprom to finish writing
+//  delay(100);
+//}
+
+// Scrive una pagina di dati nella EEPROM via SPI
+void e2prom_write_page(int address, const byte data_page[page_size]) {
+  // Abilita la scrittura sulla EEPROM
   digitalWrite(e2prom_CE, LOW);
-  SPI.transfer(EEPROM_WRITE_MEMORY_ARRAY); //write instruction
-  SPI.transfer((char)(address>>8));  //send MSByte address first
-  SPI.transfer((char)(address)); //send LSByte address
-  for (int I=0; I<page_size; I++){
-    SPI.transfer(buffer_write[I]);//write data byte
-    delay(5);
-  }
+  SPI.transfer(EEPROM_WRITE_ENABLE);
   digitalWrite(e2prom_CE, HIGH);
-  //wait for eeprom to finish writing
+  delay(5); // attesa minima per stabilità
+  // Copia i dati in un buffer locale (opzionale se data_page è già sicuro)
+  byte buffer_write[page_size];
+  memcpy(buffer_write, data_page, page_size);
+
+  // Inizio della scrittura nella memoria
+  digitalWrite(e2prom_CE, LOW);
+  SPI.transfer(EEPROM_WRITE_MEMORY_ARRAY); // comando di scrittura
+
+  // Invio dell'indirizzo (MSB prima, poi LSB)
+  SPI.transfer((uint8_t)(address >> 8));   // byte più significativo
+  SPI.transfer((uint8_t)(address & 0xFF)); // byte meno significativo
+
+  // Scrittura dei dati byte per byte
+  for (int i = 0; i < page_size; i++) {
+    SPI.transfer(buffer_write[i]);
+  }
+
+  digitalWrite(e2prom_CE, HIGH);
+
+  // Attesa per completamento scrittura (valore da datasheet)
   delay(100);
 }
 
-bool e2prom_is_connect(){
-  digitalWrite(e2prom_CE ,LOW);
-  SPI.transfer(EEPROM_WRITE_ENABLE); //write enable
-  digitalWrite(e2prom_CE, HIGH);
-  delay(5);
-
-  delayMicroseconds(10);
-
-  digitalWrite(e2prom_CE ,LOW);
-  SPI.transfer(EEPROM_READ_STATUS_REGISTER);
-  int read_status_reg = SPI.transfer(0xFF);
-  digitalWrite(e2prom_CE, HIGH);
-
-  if(read_status_reg != 0xFF && read_status_reg & (0x01 << 1)){
-    // WEL bit is set, so we are talking with the EEPROM!
-    // Let's go and disable it again
-    digitalWrite(e2prom_CE ,LOW);
-    SPI.transfer(EEPROM_WRITE_DISABLE);
-    digitalWrite(e2prom_CE, HIGH);
-    return true;
-  }
-  return false;
-}
+//bool e2prom_is_connect(){
+//  digitalWrite(e2prom_CE ,LOW);
+//  SPI.transfer(EEPROM_WRITE_ENABLE); //write enable
+//  digitalWrite(e2prom_CE, HIGH);
+//  delay(5);
+//
+//  delayMicroseconds(10);
+//
+//  digitalWrite(e2prom_CE ,LOW);
+//  SPI.transfer(EEPROM_READ_STATUS_REGISTER);
+//  int read_status_reg = SPI.transfer(0xFF);
+//  digitalWrite(e2prom_CE, HIGH);
+//
+//  if(read_status_reg != 0xFF && read_status_reg & (0x01 << 1)){
+//    // WEL bit is set, so we are talking with the EEPROM!
+//    // Let's go and disable it again
+//    digitalWrite(e2prom_CE ,LOW);
+//    SPI.transfer(EEPROM_WRITE_DISABLE);
+//    digitalWrite(e2prom_CE, HIGH);
+//    return true;
+//  }
+//  return false;
+//}
