@@ -576,11 +576,18 @@ void setup() {
   Serial.println();
   Serial.println(F("*********************"));
   
-  Serial.print(F("m3v.en = ")); Serial.println(bitRead(DR_AD5592(CE_AD_6), m3V_EN));
-  Serial.print(F("mv.en = ")); Serial.println(bitRead(DR_AD5592(CE_AD_6), mV_EN));
+  // Read and display the status of -V_EN and 3.3_EN control signals
+  byte status = DR_AD5592(CE_AD_6); // Read once to avoid multiple SPI calls
   
-  if ((bitRead(DR_AD5592(CE_AD_6), m3V_EN)) & (bitRead(DR_AD5592(CE_AD_6), mV_EN))) boot_ok = true;
-  else boot_ok = false;
+  Serial.print(F("-V_EN = "));
+  Serial.println(bitRead(status, m3V_EN)); // Read bit for -V_EN
+  
+  Serial.print(F("3.3_EN = "));
+  Serial.println(bitRead(status, mV_EN));  // Read bit for 3.3_EN
+  
+  // Check if both power enable signals are active
+  boot_ok = (bitRead(status, m3V_EN) && bitRead(status, mV_EN));
+
   
   if (boot_ok) {
     // Read the raw data from the AD5592 and extract cable status bits
@@ -660,7 +667,6 @@ void setup() {
       int i = seq[a];
       double vout;
       EEPROM.get((140+(a*4)), vout);
-      //Serial.print(seq_label[a]); Serial.print(" = "); Serial.println(vout);
       Serial.print(140+(a*4)); Serial.print(" = "); Serial.println(vout);  
       if (vout >= array_set_reg_LL[i] && vout <= array_set_reg_LH[i]) {  
         double ofs = read_ofs(i);         
@@ -1014,165 +1020,91 @@ void loop() {
   }
 }
 
-void init_LL_LH (){
+void init_LL_LH() {
+  // --- Load and validate EEPROM values ---
   EEPROM.get(100, VD_min);
-  if (isnan(VD_min)) {VD_min = 2; EEPROM.put(100, VD_min);}
-  else if (VD_min < 2 | VD_min > 8.4) {VD_min = 2; EEPROM.put(100, VD_min);}
-//  Serial.print(F("VD_min = "));
-//  Serial.println(VD_min);
-  
+  if (isnan(VD_min) || VD_min < 2 || VD_min > 8.4) {
+    VD_min = 2;
+    EEPROM.put(100, VD_min);
+  }
+
   EEPROM.get(104, VD_max);
-  if (isnan(VD_max)) {VD_max = 8.5; EEPROM.put(104, VD_max);}
-  else if (VD_max < 2.1 | VD_max > 8.5) {VD_max = 8.5; EEPROM.put(104, VD_max);}
-//  Serial.print(F("VD_max = "));
-//  Serial.println(VD_max);
-  
+  if (isnan(VD_max) || VD_max < 2.1 || VD_max > 8.5) {
+    VD_max = 8.5;
+    EEPROM.put(104, VD_max);
+  }
+
   EEPROM.get(108, VgGAAS_min);
-  if (isnan(VgGAAS_min)) {VgGAAS_min = -2.9; EEPROM.put(108, VgGAAS_min);}
-  else if (VgGAAS_min < -2.9 | VgGAAS_min > 2.8) {VgGAAS_min = -2.9; EEPROM.put(108, VgGAAS_min);}
-//  Serial.print(F("VgGAAS_min = "));
-//  Serial.println(VgGAAS_min);
-  
+  if (isnan(VgGAAS_min) || VgGAAS_min < -2.9 || VgGAAS_min > 2.8) {
+    VgGAAS_min = -2.9;
+    EEPROM.put(108, VgGAAS_min);
+  }
+
   EEPROM.get(112, Vc_SIGE_max);
-  if (isnan(Vc_SIGE_max)) {Vc_SIGE_max = 2.9; EEPROM.put(112, Vc_SIGE_max);}
-  else if (Vc_SIGE_max < -2.8 | Vc_SIGE_max > 2.9) {Vc_SIGE_max = 2.9; EEPROM.put(112, Vc_SIGE_max);}
-//  Serial.print(F("Vc_SIGE_max = "));
-//  Serial.println(Vc_SIGE_max);
-  
+  if (isnan(Vc_SIGE_max) || Vc_SIGE_max < -2.8 || Vc_SIGE_max > 2.9) {
+    Vc_SIGE_max = 2.9;
+    EEPROM.put(112, Vc_SIGE_max);
+  }
+
   EEPROM.get(116, Vif_min);
-  if (isnan(Vif_min)) {Vif_min = 0; EEPROM.put(116, Vif_min);}
-  else if (Vif_min < 0 | Vif_min > 9.4) {Vif_min = 0; EEPROM.put(116, Vif_min);}
-//  Serial.print(F("Vif_min = "));
-//  Serial.println(Vif_min);
-  
+  if (isnan(Vif_min) || Vif_min < 0 || Vif_min > 9.4) {
+    Vif_min = 0;
+    EEPROM.put(116, Vif_min);
+  }
+
   EEPROM.get(120, Vif_max);
-  if (isnan(Vif_max)) {Vif_max = 9.5; EEPROM.put(120, Vif_max);}
-  else if (Vif_max < 0.1 | Vif_max > 9.5) {Vif_max = 9.5; EEPROM.put(120, Vif_max);}
-//  Serial.print(F("Vif_max = "));
-//  Serial.println(Vif_max);
-  
+  if (isnan(Vif_max) || Vif_max < 0.1 || Vif_max > 9.5) {
+    Vif_max = 9.5;
+    EEPROM.put(120, Vif_max);
+  }
+
   EEPROM.get(124, Vref_cloop_min);
-  if (isnan(Vref_cloop_min)) {Vref_cloop_min = 0; EEPROM.put(124, Vref_cloop_min);}
-  else if (Vref_cloop_min < 0 | Vref_cloop_min > 2.3) {Vref_cloop_min = 0; EEPROM.put(124, Vref_cloop_min);}
-//  Serial.print(F("Vref_cloop_min = "));
-//  Serial.println(Vref_cloop_min);
-  
+  if (isnan(Vref_cloop_min) || Vref_cloop_min < 0 || Vref_cloop_min > 2.3) {
+    Vref_cloop_min = 0;
+    EEPROM.put(124, Vref_cloop_min);
+  }
+
   EEPROM.get(128, Vref_cloop_max);
-  if (isnan(Vref_cloop_max)) {Vref_cloop_max = 2.4; EEPROM.put(128, Vref_cloop_max);}
-  else if (Vref_cloop_max < 0.1 | Vref_cloop_max > 2.4) {Vref_cloop_max = 2.4; EEPROM.put(128, Vref_cloop_max);}
-//  Serial.print(F("Vref_cloop_max = "));
-//  Serial.println(Vref_cloop_max);
-  
+  if (isnan(Vref_cloop_max) || Vref_cloop_max < 0.1 || Vref_cloop_max > 2.4) {
+    Vref_cloop_max = 2.4;
+    EEPROM.put(128, Vref_cloop_max);
+  }
+
   EEPROM.get(132, Vg_pa_min);
-  if (isnan(Vg_pa_min)) {Vg_pa_min = -2; EEPROM.put(132, Vg_pa_min);}
-  else if (Vg_pa_min < -4 | Vg_pa_min > -2) {Vg_pa_min = -2; EEPROM.put(132, Vg_pa_min);}
-//  Serial.print(F("Vg_pa_min = "));
-//  Serial.println(Vg_pa_min);
-  
+  if (isnan(Vg_pa_min) || Vg_pa_min < -4 || Vg_pa_min > -2) {
+    Vg_pa_min = -2;
+    EEPROM.put(132, Vg_pa_min);
+  }
+
   EEPROM.get(136, Vg_pa_max);
-  if (isnan(Vg_pa_max)) {Vg_pa_max = 2.9; EEPROM.put(136, Vg_pa_max);}
-  else if (Vg_pa_max < (Vg_pa_min + 0.1) | Vg_pa_max > 2.9) {Vg_pa_max = 2.9; EEPROM.put(136, Vg_pa_max);}
-//  Serial.print(F("Vg_pa_max = "));
-//  Serial.println(Vg_pa_max);
+  if (isnan(Vg_pa_max) || Vg_pa_max < (Vg_pa_min + 0.1) || Vg_pa_max > 2.9) {
+    Vg_pa_max = 2.9;
+    EEPROM.put(136, Vg_pa_max);
+  }
 
-  array_set_reg_LL[0] = VD_min;
-  array_set_reg_LL[1] = VD_min,
-  array_set_reg_LL[2] = VD_min,
-  array_set_reg_LL[3] = VD_min,
-  array_set_reg_LL[4] = VD_min,
-  array_set_reg_LL[5] = 0;
-  array_set_reg_LL[6] = 0;
-  array_set_reg_LL[7] = 0;
-  array_set_reg_LL[8] = 0;
-  array_set_reg_LL[9] = 0;
-  array_set_reg_LL[10] = 0;
-  array_set_reg_LL[11] = 0;
-  array_set_reg_LL[12] = 0;
-  array_set_reg_LL[13] = 0;
-  array_set_reg_LL[14] = VgGAAS_min,
+  // --- Initialize Low Limit (LL) array ---
+  for (int i = 0; i < 5; i++) array_set_reg_LL[i] = VD_min;
+  for (int i = 5; i < 14; i++) array_set_reg_LL[i] = 0;
+  array_set_reg_LL[14] = VgGAAS_min;
   array_set_reg_LL[15] = Vmin_AD5592;
-  array_set_reg_LL[16] = VgGAAS_min;
-  array_set_reg_LL[17] = VgGAAS_min;
-  array_set_reg_LL[18] = VgGAAS_min;
-  array_set_reg_LL[19] = VgGAAS_min;
-  array_set_reg_LL[20] = VgGAAS_min;
-  array_set_reg_LL[21] = VgGAAS_min;
-  array_set_reg_LL[22] = VgGAAS_min;
-  array_set_reg_LL[23] = VgGAAS_min;
-  array_set_reg_LL[24] = Vif_min;
-  array_set_reg_LL[25] = Vif_min;
-  array_set_reg_LL[26] = Vif_min;
-  array_set_reg_LL[27] = Vif_min;
-  array_set_reg_LL[28] = 0;
-  array_set_reg_LL[29] = 0;
-  array_set_reg_LL[30] = 0;
-  array_set_reg_LL[31] = 0;
-  array_set_reg_LL[32] = 0;
-  array_set_reg_LL[33] = 0;
-  array_set_reg_LL[34] = 0;
-  array_set_reg_LL[35] = 0;
-  array_set_reg_LL[36] = 0;
-  array_set_reg_LL[37] = 0;
-  array_set_reg_LL[38] = 0;
-  array_set_reg_LL[39] = 0;
-  array_set_reg_LL[40] = Vref_cloop_min;
-  array_set_reg_LL[41] = Vref_cloop_min;
-  array_set_reg_LL[42] = Vref_cloop_min;
-  array_set_reg_LL[43] = Vref_cloop_min;
-  array_set_reg_LL[44] = Vg_pa_min;
-  array_set_reg_LL[45] = Vg_pa_min;
-  array_set_reg_LL[46] = Vg_pa_min;
-  array_set_reg_LL[47] = Vg_pa_min;
+  for (int i = 16; i <= 23; i++) array_set_reg_LL[i] = VgGAAS_min;
+  for (int i = 24; i <= 27; i++) array_set_reg_LL[i] = Vif_min;
+  for (int i = 28; i <= 39; i++) array_set_reg_LL[i] = 0;
+  for (int i = 40; i <= 43; i++) array_set_reg_LL[i] = Vref_cloop_min;
+  for (int i = 44; i <= 47; i++) array_set_reg_LL[i] = Vg_pa_min;
 
-  array_set_reg_LH[0] = VD_max;
-  array_set_reg_LH[1] = VD_max;
-  array_set_reg_LH[2] = VD_max;
-  array_set_reg_LH[3] = VD_max;
-  array_set_reg_LH[4] = VD_max;
-  array_set_reg_LH[5] = 0;
-  array_set_reg_LH[6] = 0;
-  array_set_reg_LH[7] = 0;
-  array_set_reg_LH[8] = 0;
-  array_set_reg_LH[9] = 0;
-  array_set_reg_LH[10] = 0;
-  array_set_reg_LH[11] = 0;
-  array_set_reg_LH[12] = 0;
-  array_set_reg_LH[13] = 0;
+  // --- Initialize High Limit (LH) array ---
+  for (int i = 0; i < 5; i++) array_set_reg_LH[i] = VD_max;
+  for (int i = 5; i < 14; i++) array_set_reg_LH[i] = 0;
   array_set_reg_LH[14] = Vc_SIGE_max;
   array_set_reg_LH[15] = Vmax_AD5592;
-  array_set_reg_LH[16] = Vc_SIGE_max;
-  array_set_reg_LH[17] = Vc_SIGE_max;
-  array_set_reg_LH[18] = Vc_SIGE_max;
-  array_set_reg_LH[19] = Vc_SIGE_max;
-  array_set_reg_LH[20] = Vc_SIGE_max;
-  array_set_reg_LH[21] = Vc_SIGE_max;
-  array_set_reg_LH[22] = Vc_SIGE_max;
-  array_set_reg_LH[23] = Vc_SIGE_max;
-  array_set_reg_LH[24] = Vif_max;
-  array_set_reg_LH[25] = Vif_max;
-  array_set_reg_LH[26] = Vif_max;
-  array_set_reg_LH[27] = Vif_max;
-  array_set_reg_LH[28] = 0;
-  array_set_reg_LH[29] = 0;
-  array_set_reg_LH[30] = 0;
-  array_set_reg_LH[31] = 0;
-  array_set_reg_LH[32] = 0;
-  array_set_reg_LH[33] = 0;
-  array_set_reg_LH[34] = 0;
-  array_set_reg_LH[35] = 0;
-  array_set_reg_LH[36] = 0;
-  array_set_reg_LH[37] = 0;
-  array_set_reg_LH[38] = 0;
-  array_set_reg_LH[39] = 0;
-  array_set_reg_LH[40] = Vref_cloop_max;
-  array_set_reg_LH[41] = Vref_cloop_max;
-  array_set_reg_LH[42] = Vref_cloop_max;
-  array_set_reg_LH[43] = Vref_cloop_max;
-  array_set_reg_LH[44] = Vg_pa_max;
-  array_set_reg_LH[45] = Vg_pa_max;
-  array_set_reg_LH[46] = Vg_pa_max;
-  array_set_reg_LH[47] = Vg_pa_max;
+  for (int i = 16; i <= 23; i++) array_set_reg_LH[i] = Vc_SIGE_max;
+  for (int i = 24; i <= 27; i++) array_set_reg_LH[i] = Vif_max;
+  for (int i = 28; i <= 39; i++) array_set_reg_LH[i] = 0;
+  for (int i = 40; i <= 43; i++) array_set_reg_LH[i] = Vref_cloop_max;
+  for (int i = 44; i <= 47; i++) array_set_reg_LH[i] = Vg_pa_max;
 }
+
 
 int find_index_cmd_get_set (String command) {
 //  Serial.print("command = ");
@@ -1530,26 +1462,41 @@ void conf_AD5592_5 (byte cs) {
   delay(5);
 }
 
-void conf_AD5592_6 (byte cs) {
+// Configures the AD5592R device connected to chip select 'cs'
+void conf_AD5592_6(byte cs) {
+  // Begin SPI communication with specific settings:
+  // - Clock speed: 500 kHz
+  // - Bit order: MSB first
+  // - SPI mode: 1
   SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE1));
-  init_AD5592 (cs);
 
-// AD5592R ADC pin configuration (Reg Add 0100): IO4 as ADC (analog input) 
+  // Initialize the AD5592R device
+  init_AD5592(cs);
+
+  // --- Configure IO4 as ADC (analog input) ---
+  // Register Address: 0x04 (ADC Enable)
   digitalWrite(cs, LOW);
-  SPI.transfer(B00100000); //D15-D8 (D15|0100|3xReserved)
-  SPI.transfer(B00010000); //D7-D0 (IO7|IO6|IO5|IO4|IO3|IO2|IO1|IO0)
+  SPI.transfer(B00100000); // D15-D8: Command bits (Write to register 0x04)
+  SPI.transfer(B00010000); // D7-D0: Enable ADC on IO4 (bit 4 set)
   digitalWrite(cs, HIGH);
-  delay(5);
+  delay(5); // Short delay for stability
 
-// AD5592R GPIO Read Configuration Register (Reg Add 1010): IO0 to IO3, IO6, IO7 put as GPIO Input
+  // --- Configure GPIO Read Enable ---
+  // Register Address: 0x0A (GPIO Read Configuration)
+  // Enable GPIO input on IO0 to IO3, IO6, and IO7
   digitalWrite(cs, LOW);
-  SPI.transfer(B01010000); //D15-D8 (D15|1010|GPIO_RD_EN|2xReserved)
-  SPI.transfer(B11001111); //D7-D0 (IO7|IO6|IO5|IO4|IO3|IO2|IO1|IO0)
+  SPI.transfer(B01010000); // D15-D8: Command bits (Write to register 0x0A)
+  SPI.transfer(B11001111); // D7-D0: Enable GPIO input on selected pins
   digitalWrite(cs, HIGH);
-  delay(5);
+  delay(5); // Short delay for stability
 
+  // Read back configuration or status (optional, depends on DR_AD5592 implementation)
   DR_AD5592(cs);
+
+  // End SPI transaction (optional, depending on your SPI usage pattern)
+  SPI.endTransaction();
 }
+
 
 void conf_AD5592_DTX (byte cs) {
   SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE1));
