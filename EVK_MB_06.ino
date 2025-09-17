@@ -582,35 +582,73 @@ void setup() {
   if ((bitRead(DR_AD5592(CE_AD_6), m3V_EN)) & (bitRead(DR_AD5592(CE_AD_6), mV_EN))) boot_ok = true;
   else boot_ok = false;
   
-  if (boot_ok){  
-    byte cbl_1 = B00000011 & DR_AD5592(CE_AD_6);
-    byte cbl_2 = B00000011 & (DR_AD5592(CE_AD_6) >> 2);
-  //  Serial.print("cbl1.2 = "); Serial.println(bitRead(DR_AD5592(CE_AD_6), Cable1_pin2));
-  //  Serial.print("cbl1.1 = "); Serial.println(bitRead(DR_AD5592(CE_AD_6), Cable1_pin1));
-  //  Serial.print("cbl_1 = "); Serial.println(cbl_1);
-    if (cbl_1 == 0) Serial.println(F("cable_1 general error"));
-    else if (cbl_1 == 1) Serial.println(F("cable_1 error! wrong position"));
-    else if (cbl_1 == 2) Serial.println(F("cable_1 OK"));
-    else Serial.println(F("cable_1 error! check if is inserted fine"));
-  //  Serial.print("cbl2.1 = "); Serial.println(bitRead(DR_AD5592(CE_AD_6), Cable2_pin1));
-  //  Serial.print("cbl2.2 = "); Serial.println(bitRead(DR_AD5592(CE_AD_6), Cable2_pin2));
-  //  Serial.print("cbl_2 = "); Serial.println(cbl_2);
-    if (cbl_2 == 0) Serial.println(F("cable_2 general error"));
-    else if (cbl_2 == 1) Serial.println(F("cable_2 error! wrong position"));
-    else if (cbl_2 == 2) Serial.println(F("cable_2 OK"));
-    else Serial.println(F("cable_2 error! check if is inserted fine"));
-    
-    if ((cbl_1 == 2) & (cbl_2 == 2)) boot_ok = true;
-    else boot_ok = false;
-  }
+  if (boot_ok) {
+    // Read the raw data from the AD5592 and extract cable status bits
+    byte raw_data = DR_AD5592(CE_AD_6);
   
-  if (boot_ok){ 
+    // Extract status bits for cable 1 (bits 0 and 1)
+    byte cbl_1 = raw_data & B00000011;
+  
+    // Extract status bits for cable 2 (bits 2 and 3)
+    byte cbl_2 = (raw_data >> 2) & B00000011;
+  
+    // Evaluate cable 1 status
+    Serial.print(F("cable_1 "));    
+    switch (cbl_1) {
+      case 0:
+        Serial.println(F("general error"));
+        break;
+      case 1:
+        Serial.println(F("error! wrong position"));
+        break;
+      case 2:
+        Serial.println(F("OK"));
+        break;
+      default:
+        Serial.println(F("error! check if it is inserted properly"));
+        break;
+    }
+  
+    // Evaluate cable 2 status
+    Serial.print(F("cable_2 "));
+    switch (cbl_2) {
+      case 0:
+        Serial.println(F("general error"));
+        break;
+      case 1:
+        Serial.println(F("error! wrong position"));
+        break;
+      case 2:
+        Serial.println(F("OK"));
+        break;
+      default:
+        Serial.println(F("error! check if it is inserted properly"));
+        break;
+    }
+
+  // Final check: both cables must be OK to proceed
+  boot_ok = (cbl_1 == 2 && cbl_2 == 2);
+}
+
+  
+
+  if (boot_ok) {
+    // Read the DB code using the AR_AD5592 function
     double db_code = AR_AD5592(CE_AD_6, DB_code, 0, 1);
-//    Serial.print("db.code = "); Serial.println(db_code, 3);
-    if (db_code > 0.1 && db_code < 0.3)Serial.println(F("DB => Sip-eBand_TX"));
-    else if (db_code > 0.31 && db_code < 0.5) Serial.println(F("DB => Sip-eBand_RX"));
-    else {Serial.println(F("DB type not recognized")); boot_ok = false;}
+  
+    // Check the value range of db_code and print corresponding message
+    if (db_code > 0.1 && db_code < 0.3) {
+      Serial.println(F("DB => Sip-eBand_TX")); // TX configuration detected
+    }
+    else if (db_code > 0.31 && db_code < 0.5) {
+      Serial.println(F("DB => Sip-eBand_RX")); // RX configuration detected
+    }
+    else {
+      Serial.println(F("DB type not recognized")); // Unknown configuration
+      boot_ok = false; // Mark boot as failed
+    }
   }
+
   
   if (boot_ok){
     Serial.println(F("*********************"));  
@@ -623,7 +661,7 @@ void setup() {
       double vout;
       EEPROM.get((140+(a*4)), vout);
       //Serial.print(seq_label[a]); Serial.print(" = "); Serial.println(vout);
-      Serial.print(seq[a]); Serial.print(" = "); Serial.println(vout);  
+      Serial.print(140+(a*4)); Serial.print(" = "); Serial.println(vout);  
       if (vout >= array_set_reg_LL[i] && vout <= array_set_reg_LH[i]) {  
         double ofs = read_ofs(i);         
         double k = read_k(i); 
