@@ -54,11 +54,11 @@ bool boot_ok = false;
 #define VCO_EN  11
 #define e2prom_CE  12
 #define LE_ADF4108  13
-#define ID_VCO A0
-#define VD3_EN  A1
-#define VD4_EN  A2
-#define VD5_EN  A3
-#define EN_ISOLATOR  A4
+#define ID_VCO A0       // pin 36
+#define VD3_EN  A1      // pin 37
+#define VD4_EN  A2      // pin 38
+#define VD5_EN  A3      // pin 39
+#define EN_ISOLATOR  A4 // pin 40
 
 //AD5592_1
 #define Vref_VD1  0
@@ -620,7 +620,6 @@ void setup() {
   
   // Check if both power enable signals are active
   boot_ok = (bitRead(status, m3V_EN) && bitRead(status, mV_EN));
-
   
   if (boot_ok) {
     // Read the raw data from the AD5592 and extract cable status bits
@@ -688,36 +687,56 @@ void setup() {
       boot_ok = false; // Mark boot as failed
     }
   }
-
   
-  if (boot_ok){
-    Serial.println(F("*********************"));  
+  if (boot_ok) {
+    Serial.println(F("*********************"));
     Serial.println();
-    Serial.println(F("start to set vdac default"));
+    Serial.println(F("Start setting VDAC defaults"));
     Serial.print(prompt);
   
-    for (int a=0; a<seq_lenght; a++) {
+    for (int a = 0; a < seq_lenght; a++) {
       int i = seq[a];
       double vout;
-      EEPROM.get((140+(a*4)), vout);
-      //Serial.print(140+(a*4)); Serial.print(" = "); Serial.println(vout);  
-      if (vout >= array_set_reg_LL[i] && vout <= array_set_reg_LH[i]) {  
-        double ofs = read_ofs(i);         
-        double k = read_k(i); 
-        double vda = 0;
-        byte calc = array_calc[i];
-        bool dis_isolator = array_dis_isolator[i];
-        if (calc == 1) {vda = (ofs - vout) / k;}
-        else if (calc == 2) {vda = (vout / k) + ofs;}
-        else if (calc == 4) {vda = (vout + ofs) * k;}
-        if (vda >= Vmin_AD5592 && vda <= Vmax_AD5592){
-          if (dis_isolator) {digitalWrite(EN_ISOLATOR, LOW);}
-          AW_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], vda); if (DAC_readback) {boot_ok = true; print_ok();} else {boot_ok = false; print_error_DAC_readback();}
-          if (dis_isolator) {digitalWrite(EN_ISOLATOR, HIGH);}
+  
+      // Read VOUT value from EEPROM (each value is 4 bytes apart)
+      EEPROM.get(140 + (a * 4), vout);
+  
+      // Check if VOUT is within allowed limits
+      if (vout >= array_set_reg_LL[i] && vout <= array_set_reg_LH[i]) {
+        double ofs = read_ofs(i);           // Read offset
+        double k = read_k(i);               // Read gain factor
+        double vda = 0;                     // Calculated DAC value
+        byte calc = array_calc[i];         // Calculation method
+        bool dis_isolator = array_dis_isolator[i]; // Whether to disable isolator
+  
+        // Apply the correct formula based on calculation mode
+        if (calc == 1) vda = (ofs - vout) / k;
+        else if (calc == 2) vda = (vout / k) + ofs;
+        else if (calc == 4) vda = (vout + ofs) * k;
+  
+        // Check if calculated VDAC is within DAC limits
+        if (vda >= Vmin_AD5592 && vda <= Vmax_AD5592) {
+          if (dis_isolator) digitalWrite(EN_ISOLATOR, LOW); // Disable isolator if needed
+  
+          // Write to DAC and verify with readback
+          AW_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], vda);
+          if (DAC_readback) {
+            boot_ok = true;
+//            print_ok();
+          } else {
+            boot_ok = false;
+            print_error_DAC_readback();
+          }
+  
+          if (dis_isolator) digitalWrite(EN_ISOLATOR, HIGH); // Re-enable isolator
+        } else {
+          boot_ok = false;
+          print_vdac_exc(); // VDAC out of range
         }
-        else {boot_ok = false; print_vdac_exc();}
+      } else {
+        boot_ok = false;
+        print_exc_limit(); // VOUT out of allowed limits
       }
-      else {boot_ok = false; print_exc_limit();}
     }
   }
   
@@ -741,78 +760,174 @@ void loop() {
     if (c == 0x0D){
       Serial.println();
 
-      if (command == "help"){print_cmdlist(); Serial.print(prompt);}
-      else if (command == "error"){print_error_code_list();Serial.print(prompt);}
-      
-      else if (command == "F"){Serial.println(FW); print_ok();}
-      
-      else if (command == "S"){
-        Serial.println(sn);
-        print_ok();
-      }  
+      // Handle basic serial commands
+      if (command == "help") {
+        print_cmdlist();           // Print list of available commands
+        Serial.print(prompt);      // Show prompt again
+      }
+//      else if (command == "error") {
+//        print_error_code_list();   // Print list of error codes
+//        Serial.print(prompt);      // Show prompt again
+//      }
+      else if (command == "F") {
+        Serial.println(FW);        // Print firmware version
+        print_ok();                // Confirm success
+      }
+      else if (command == "S") {
+        Serial.println(sn);        // Print serial number
+        print_ok();                // Confirm success
+      }
       else if (command.charAt(0) == 'S'){
-        if ((command.substring(2).toInt()) < 255){
-          sn = command.substring(2).toInt();
-          EEPROM.write(0, sn);
-          Serial.println(sn);
-          print_ok();
-        }
-        else print_exc_limit();
-      }
-
-      else if (command.charAt(0) == 'G' && command.charAt(1) == 'E'){
-        if ((((command.substring(3).toInt()) < 1024) && ((command.substring(3).toInt()) > 99)) || ((command.substring(3).toInt()) == 10) ){
-          double value;
-          EEPROM.get((command.substring(3).toInt()), value);
-//          Serial.print("eeprom get double[");
-//          Serial.print(ADD);
-//          Serial.print("] = ");
-          if (isnan(value)){Serial.println("eeprom data isn't a number"); print_isnt_num();}
-          else {Serial.println(value, 3); print_ok();}
-          
-        }
-        else print_exc_limit();
-      }
+        // Extract the number after 'S ' (assuming format like "S 123")
+        int new_sn = command.substring(2).toInt();
       
-      else if (command.charAt(0) == 'P' && command.charAt(1) == 'E'){
+        // Validate serial number range
+        if (new_sn < 255) {
+          sn = new_sn;                      // Update serial number
+          EEPROM.write(0, sn);             // Save to EEPROM at address 0
+          Serial.println(sn);              // Print the new serial number
+          print_ok();                      // Confirm success
+        } else {
+          print_exc_limit();               // Print error if out of range
+        }
+      }
+      //      else if (command.charAt(0) == 'G' && command.charAt(1) == 'E'){
+      //        if ((((command.substring(3).toInt()) < 1024) && ((command.substring(3).toInt()) > 99)) || ((command.substring(3).toInt()) == 10) ){
+      //          double value;
+      //          EEPROM.get((command.substring(3).toInt()), value);
+      //          if (isnan(value)){Serial.println("eeprom data isn't a number"); print_isnt_num();}
+      //          else {Serial.println(value, 3); print_ok();}
+      //          
+      //        }
+      //        else print_exc_limit();
+      //      }
+      // Handle command starting with "GE" to read a double value from EEPROM
+      else if (command.charAt(0) == 'G' && command.charAt(1) == 'E') {
+        // Extract the EEPROM address from the command string (after "GE ")
+        int ADD = command.substring(3).toInt();
+      
+        // Validate address: must be between 100 and 1023, or exactly 10
+        if ((ADD > 99 && ADD < 1024) || ADD == 10) {
+          double value;
+          EEPROM.get(ADD, value); // Read double value from EEPROM
+      
+          // Check if the value is a valid number
+          if (isnan(value)) {
+            Serial.println("EEPROM data isn't a number");
+            print_isnt_num(); // Custom error handler
+          } else {
+            Serial.println(value, 3); // Print value with 3 decimal places
+            print_ok();               // Confirm success
+          }
+        } else {
+          print_exc_limit(); // Print error if address is out of valid range
+        }
+      }      
+//      else if (command.charAt(0) == 'P' && command.charAt(1) == 'E'){
+//        byte pos = command.indexOf(',');
+//        int ADD = command.substring(3, pos).toInt();
+//        double value = command.substring(pos + 1).toDouble();
+//        if (((ADD < 1024 && ADD > 99) || ADD == 10) && value > -1000 && value < 10000){
+//          EEPROM.put(ADD, value);
+//          if (ADD < 137 && ADD > 99){init_LL_LH();}
+//          print_ok();
+//        }
+//        else print_exc_limit();
+//      }
+      // Handle command starting with "PE" to write a double value to EEPROM
+      else if (command.charAt(0) == 'P' && command.charAt(1) == 'E') {
+        // Find the comma position separating address and value
         byte pos = command.indexOf(',');
+      
+        // Extract EEPROM address and value from the command string
         int ADD = command.substring(3, pos).toInt();
         double value = command.substring(pos + 1).toDouble();
-        if (ADD < 1024 && ADD > 99 && value > -1000 && value < 1000){
-          EEPROM.put(ADD, value);
-          if (ADD < 137 && ADD > 99){init_LL_LH();}
-//          Serial.print("eeprom put double [");
-//          Serial.print(ADD);
-//          Serial.print("] = ");
-//          Serial.println(value, 3);
-          print_ok();
-        }
-        else print_exc_limit();
-      }
       
-      else if (command.charAt(0) == 'R' && command.charAt(1) == 'E'){
-          if ((command.substring(3).toInt()) < 1024){
-//            Serial.print("eeprom read byte [");
-//            Serial.print(command.substring(2).toInt());
-//            Serial.print("] = ");
-            Serial.println(EEPROM.read(command.substring(2).toInt()));
-            print_ok();
+        // Validate address and value ranges
+        if (((ADD > 99 && ADD < 1024) || ADD == 10) && value > -1000 && value < 10000) {
+          EEPROM.put(ADD, value); // Write the double value to EEPROM
+      
+          // If the address is within the LL/LH config range, reinitialize limits
+          if (ADD > 99 && ADD < 137) {
+            init_LL_LH();
           }
-          else print_exc_limit();
-      }
-      else if (command.charAt(0) == 'W' && command.charAt(1) == 'E'){
-        byte pos = command.indexOf(',');
-        int ADD = command.substring(3, pos).toInt();
-        byte value = command.substring(pos + 1).toInt();
-        if (ADD < 1024 && value < 256){
-          EEPROM.write(ADD, value);
-//          Serial.print("eeprom write byte[");
-//          Serial.print(ADD);
-//          Serial.print("] = ");
-//          Serial.println(value);
-          print_ok();
+      
+          print_ok(); // Confirm success
+        } else {
+          print_exc_limit(); // Print error if address or value is out of range
         }
-        else print_exc_limit();
+      }
+
+      //      else if (command.charAt(0) == 'R' && command.charAt(1) == 'E'){
+      //          if ((command.substring(3).toInt()) < 1024){
+      //
+      //            Serial.println(EEPROM.read(command.substring(2).toInt()));
+      //            print_ok();
+      //          }
+      //          else print_exc_limit();
+      //      }
+      // Check if the command starts with 'R' and 'E' (Read EEPROM)
+      else if (command.charAt(0) == 'R' && command.charAt(1) == 'E') {
+      
+          // Convert the substring starting from index 3 to an integer
+          // This is used to validate the EEPROM address
+          int address_check = command.substring(3).toInt();
+      
+          // Ensure the address is within EEPROM bounds (0–1023)
+          if (address_check < 1024) {
+      
+              // Convert the substring starting from index 2 to an integer
+              // This is the actual address used to read from EEPROM
+              int address = command.substring(2).toInt();
+      
+              // Read the value from EEPROM and print it to the Serial Monitor
+              Serial.println(EEPROM.read(address));
+      
+              // Indicate successful operation
+              print_ok();
+          } else {
+              // Address is out of bounds, print error
+              print_exc_limit();
+          }
+      }
+
+      //      else if (command.charAt(0) == 'W' && command.charAt(1) == 'E'){
+      //        byte pos = command.indexOf(',');
+      //        int ADD = command.substring(3, pos).toInt();
+      //        byte value = command.substring(pos + 1).toInt();
+      //        if (ADD < 1024 && value < 256){
+      //          EEPROM.write(ADD, value);
+      ////          Serial.print("eeprom write byte[");
+      ////          Serial.print(ADD);
+      ////          Serial.print("] = ");
+      ////          Serial.println(value);
+      //          print_ok();
+      //        }
+      //        else print_exc_limit();
+      //      }
+      // Check if the command starts with 'W' and 'E' (Write EEPROM)
+      else if (command.charAt(0) == 'W' && command.charAt(1) == 'E') {
+      
+          // Find the position of the comma separating address and value
+          byte pos = command.indexOf(',');
+      
+          // Extract EEPROM address from the command (between index 3 and comma)
+          int address = command.substring(3, pos).toInt();
+      
+          // Extract value to write (after the comma)
+          byte value = command.substring(pos + 1).toInt();
+      
+          // Validate address and value ranges
+          if (address < 1024 && value < 256) {
+              // Write the value to EEPROM at the specified address
+              EEPROM.write(address, value);
+      
+              // Indicate successful operation
+              print_ok();
+          } else {
+              // Address or value out of bounds, print error
+              print_exc_limit();
+          }
       }
 
       else if (command.charAt(0) == 'G' && command.charAt(1) == 'M'){
@@ -856,32 +971,54 @@ void loop() {
 //      else if (command == "cbl1.1"){Serial.println(bitRead(DR_AD5592(CE_AD_6), Cable1_pin1)); print_ok();}
 //      else if (command == "cbl2.1"){Serial.println(bitRead(DR_AD5592(CE_AD_6), Cable2_pin1)); print_ok();}
 //      else if (command == "cbl2.2"){Serial.println(bitRead(DR_AD5592(CE_AD_6), Cable2_pin2)); print_ok();}
-      else if (command == "db.type"){
-        double db_code = AR_AD5592(CE_AD_6, DB_code, 0, 1);
-//        Serial.println(db_code, 3);
-        if (db_code > 0.1 && db_code < 0.3) Serial.println(F("Sip-eBand_TX"));
-        else if (db_code > 0.31 && db_code < 0.5) Serial.println(F("Sip-eBand_RX"));
-//        else {Serial.println(F("DB type not recognized")); boot_ok = false;}        
-        print_ok();
-      }
-//      else if (command == "mv.en"){Serial.println(bitRead(DR_AD5592(CE_AD_6), mV_EN)); print_ok();}
-//      else if (command == "m3v.en"){Serial.println(bitRead(DR_AD5592(CE_AD_6), m3V_EN)); print_ok();}
+      // Check if the command is "db.type"
+      else if (command == "db.type") {
       
-      else if (command == "idvco"){
-        double ofs = 0;
-        EEPROM.get(300, ofs);
-        if (isnan(ofs)) {ofs = 0; EEPROM.put(300, ofs);}
-        else if (ofs < -1000 | ofs > 1000) {ofs = 0; EEPROM.put(300, ofs);}
-//        Serial.print("ofs = ");
-//        Serial.println(ofs);
-        double k = 0;
-        EEPROM.get(304, k);
-        if (isnan(k)) {k = 1; EEPROM.put(304, k);}
-        else if (k < -1000 | k > 1000) {k = 1; EEPROM.put(304, k);}
-//        Serial.print("k = ");
-//        Serial.println(k);
-        Serial.println(AR_32u4(ID_VCO, ofs, k), 3); print_ok();
+          // Read the db_code value using AR_AD5592 function
+          // Parameters: CE_AD_6 (chip enable), DB_code (channel), 0 (dummy), 1 (read mode)
+          double db_code = AR_AD5592(CE_AD_6, DB_code, 0, 1);
+      
+          // Identify the type based on db_code range
+          if (db_code > 0.1 && db_code < 0.3) {
+              Serial.println(F("Sip-eBand_TX"));
+          }
+          else if (db_code > 0.31 && db_code < 0.5) {
+              Serial.println(F("Sip-eBand_RX"));
+          }
+      
+          // Indicate successful operation
+          print_ok();
       }
+      // Check if the command is "idvco"
+      else if (command == "idvco") {
+      
+          // --- Read and validate 'ofs' (offset) from EEPROM address 300 ---
+          double ofs = 0;
+          EEPROM.get(300, ofs);
+      
+          // If 'ofs' is NaN or out of acceptable range, reset to 0 and store it
+          if (isnan(ofs) || ofs < -1000 || ofs > 1000) {
+              ofs = 0;
+              EEPROM.put(300, ofs);
+          }
+      
+          // --- Read and validate 'k' (coefficient) from EEPROM address 304 ---
+          double k = 0;
+          EEPROM.get(304, k);
+      
+          // If 'k' is NaN or out of acceptable range, reset to 1 and store it
+          if (isnan(k) || k < -1000 || k > 1000) {
+              k = 1;
+              EEPROM.put(304, k);
+          }
+      
+          // --- Compute and print the result using AR_32u4 with validated values ---
+          Serial.println(AR_32u4(ID_VCO, ofs, k), 3);
+      
+          // Indicate successful operation
+          print_ok();
+      }
+
 //*************************out command*************************************
       else if (command.substring(0, 3) == "out"){
         if (command.substring(7, 4) == "get"){         
@@ -1017,31 +1154,64 @@ void loop() {
         else print_cmd_nfound();
       }
 
-     
-//ADF4108 essential//
-      else if (command == "fvco"){
-//        Serial.print(F("fvco (MHz) = "));
-        Serial.println(fvco);
-        print_ok();
-      }
-      else if (command.substring(0, 4) == "fvco"){
-        if ((command.substring(5).toDouble()) >= 1000 && (command.substring(17).toDouble()) <= 8000){
-          fvco = command.substring(5).toDouble();
-          EEPROM.put(10, fvco);
-//          Serial.print(F("fvco (MHz) = "));
-//          Serial.println(fvco);
-          reg_calc();
-          write_adf4108(REF_Reg);
-          write_adf4108(AB_Reg);
-          write_adf4108(FUNCT_Reg);
+      //      else if (command == "fvco"){
+      //        Serial.println(fvco);
+      //        print_ok();
+      //      }
+
+      // --- Handle "fvco" command ---
+      else if (command == "fvco") {
+          // Print the current value of fvco
+          Serial.println(fvco);
           print_ok();
-        }
-        else {print_exc_limit();}
       }
-         
+      //      else if (command.substring(0, 4) == "fvco"){
+      //        if ((command.substring(5).toDouble()) >= 1000 && (command.substring(17).toDouble()) <= 8000){
+      //          fvco = command.substring(5).toDouble();
+      //          EEPROM.put(10, fvco);
+      //          reg_calc();
+      //          write_adf4108(REF_Reg);
+      //          write_adf4108(AB_Reg);
+      //          write_adf4108(FUNCT_Reg);
+      //          print_ok();
+      //        }
+      //        else {print_exc_limit();}
+      //      }
+      // --- Handle "fvco<value>" command for setting fvco ---
+      else if (command.substring(0, 4) == "fvco") {
+      
+          // Extract the new fvco value from the command (starting after "fvco ")
+          double new_fvco = command.substring(5).toDouble();
+      
+          // Validate that the new fvco value is within the allowed range
+          if (new_fvco >= 1000 && new_fvco <= 8000) {
+      
+              // Update the fvco variable
+              fvco = new_fvco;
+      
+              // Store the new value in EEPROM at address 10
+              EEPROM.put(10, fvco);
+      
+              // Recalculate register values and write them to the ADF4108
+              reg_calc();
+              write_adf4108(REF_Reg);
+              write_adf4108(AB_Reg);
+              write_adf4108(FUNCT_Reg);
+      
+              // Indicate successful operation
+              print_ok();
+          } else {
+              // Value is out of range, print error
+              print_exc_limit();
+          }
+      } 
       else {
-        if (command != ""){Serial.println(F("ERROR 99"));}
+        if (command != ""){
+            print_cmd_nfound();
+          }
+        else{
         Serial.print(prompt);
+          }        
       }
       command = "";
     }
@@ -1293,7 +1463,7 @@ double read_k(int x){
 void print_cmdlist() {
   Serial.println();
   Serial.println(F("*******command list**********"));
-  Serial.println(F("error (error_code_list)"));
+//  Serial.println(F("error (error_code_list)"));
   Serial.println(F("F (read firmware version)"));
   Serial.println(F("S (read serial number)"));
   Serial.println(F("WE xxxx,xx = write byte eeprom ADD[0 to 1023],VALUE[0 to 255]"));
@@ -1373,43 +1543,43 @@ void print_cmdlist() {
 
   Serial.println(F("*********************"));
 }
-void print_error_code_list() {
-  for (int i=700; i<930; i++){
-    Serial.print((char)EEPROM.read(i));
-  }
-  Serial.println();
-  Serial.println(F("*******error list code**********"));
-  Serial.println(F("OK -> no error"));
-  Serial.println(F("1 -> error DAC readback register"));
-  Serial.println(F("2 -> value exceed the limits"));
-  Serial.println(F("3 -> v dac exceed the limits (ie calibration value strange value)"));
-  Serial.println(F("4 -> value is not a number"));
-  Serial.println(F("99 -> command not found"));
-
-  Serial.println(F("*********************"));
-}
+//void print_error_code_list() {
+//  for (int i=700; i<930; i++){
+//    Serial.print((char)EEPROM.read(i));
+//  }
+//  Serial.println();
+//  Serial.println(F("*******error list code**********"));
+//  Serial.println(F("OK -> no error"));
+//  Serial.println(F("1 -> error DAC readback register"));
+//  Serial.println(F("2 -> value exceed the limits"));
+//  Serial.println(F("3 -> v dac exceed the limits (ie calibration value strange value)"));
+//  Serial.println(F("4 -> value is not a number"));
+//  Serial.println(F("99 -> command not found"));
+//
+//  Serial.println(F("*********************"));
+//}
 void print_ok() {
   Serial.println(F("OK"));
   Serial.print(prompt); 
 }
 void print_error_DAC_readback() {
-  Serial.println(F("ERROR 1"));
+  Serial.println(F("DAC readback register error"));
   Serial.print(prompt); 
 }
 void print_exc_limit(){
-  Serial.println(F("ERROR 2"));
+  Serial.println(F("value exceed the limits"));
   Serial.print(prompt);
 }
 void print_vdac_exc(){
-  Serial.println(F("ERROR 3"));
+  Serial.println(F("v dac exceed the limits (ie calibration value strange value)"));
   Serial.print(prompt);
 }
 void print_isnt_num(){
-  Serial.println(F("ERROR 4"));
+  Serial.println(F("value is not a number"));
   Serial.print(prompt);
 }
 void print_cmd_nfound(){
-  Serial.println(F("ERROR 99"));
+  Serial.println(F("command not found"));
   Serial.print(prompt);
 }
 
