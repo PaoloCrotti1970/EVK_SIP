@@ -23,8 +23,9 @@ const char *prompt = ">";
 String command = "";
 byte c = 0x00;
 
-int sn = ((EEPROM.read(1) & 0XFFFF) << 8) | (EEPROM.read(0) & 0xFFFF);
-int sn_db;
+//int sn = ((EEPROM.read(1) & 0XFFFF) << 8) | (EEPROM.read(0) & 0xFFFF);
+byte sn = EEPROM.read(0);
+//int sn_db;
 
 uint32_t wReg;
 bool valid;
@@ -412,49 +413,69 @@ void setup() {
 //  while (!Serial) {}
   Serial.begin(115200);
   delay (2000);
-  Serial.println();
   Serial.println(F("EVK - Mother Board v1.0"));
   Serial.print(F("Firmware Version = "));
   Serial.println (FW);
   Serial.print(F("Serial Number = "));
   Serial.println(sn);
-  Serial.println();
 
 //  analogReference(EXTERNAL);
   
-  pinMode (CE_AD_DTX, OUTPUT);
-  digitalWrite (CE_AD_DTX, HIGH);
-  pinMode (CE_AD_1, OUTPUT);
-  digitalWrite (CE_AD_1, HIGH);
-  pinMode (CE_AD_2, OUTPUT);
-  digitalWrite (CE_AD_2, HIGH);
-  pinMode (CE_AD_3, OUTPUT);
-  digitalWrite (CE_AD_3, HIGH);
-  pinMode (CE_AD_4, OUTPUT);
-  digitalWrite (CE_AD_4, HIGH);
-  pinMode (CE_AD_5, OUTPUT);
-  digitalWrite (CE_AD_5, HIGH);
-  pinMode (CE_AD_6, OUTPUT);
-  digitalWrite (CE_AD_6, HIGH);
-  pinMode (e2prom_CE, OUTPUT);
-  digitalWrite (e2prom_CE, HIGH);
-  pinMode (LE_ADF4108, OUTPUT);
-  digitalWrite (LE_ADF4108, HIGH);
+//  pinMode (CE_AD_DTX, OUTPUT);
+//  digitalWrite (CE_AD_DTX, HIGH);
+//  pinMode (CE_AD_1, OUTPUT);
+//  digitalWrite (CE_AD_1, HIGH);
+//  pinMode (CE_AD_2, OUTPUT);
+//  digitalWrite (CE_AD_2, HIGH);
+//  pinMode (CE_AD_3, OUTPUT);
+//  digitalWrite (CE_AD_3, HIGH);
+//  pinMode (CE_AD_4, OUTPUT);
+//  digitalWrite (CE_AD_4, HIGH);
+//  pinMode (CE_AD_5, OUTPUT);
+//  digitalWrite (CE_AD_5, HIGH);
+//  pinMode (CE_AD_6, OUTPUT);
+//  digitalWrite (CE_AD_6, HIGH);
+//  pinMode (e2prom_CE, OUTPUT);
+//  digitalWrite (e2prom_CE, HIGH);
+//  pinMode (LE_ADF4108, OUTPUT);
+//  digitalWrite (LE_ADF4108, HIGH);
+//
+//  pinMode (VD1_EN, OUTPUT);
+//  digitalWrite (VD1_EN, LOW);
+//  pinMode (VD2_EN, OUTPUT);
+//  digitalWrite (VD2_EN, LOW);
+//  pinMode (VD3_EN, OUTPUT);
+//  digitalWrite (VD3_EN, LOW);
+//  pinMode (VD4_EN, OUTPUT);
+//  digitalWrite (VD4_EN, LOW);
+//  pinMode (VD5_EN, OUTPUT);
+//  digitalWrite (VD5_EN, LOW);
+//  pinMode (VCO_EN, OUTPUT);
+//  digitalWrite (VCO_EN, LOW);
+//  pinMode (EN_ISOLATOR, OUTPUT);
+//  digitalWrite (EN_ISOLATOR, HIGH);
 
-  pinMode (VD1_EN, OUTPUT);
-  digitalWrite (VD1_EN, LOW);
-  pinMode (VD2_EN, OUTPUT);
-  digitalWrite (VD2_EN, LOW);
-  pinMode (VD3_EN, OUTPUT);
-  digitalWrite (VD3_EN, LOW);
-  pinMode (VD4_EN, OUTPUT);
-  digitalWrite (VD4_EN, LOW);
-  pinMode (VD5_EN, OUTPUT);
-  digitalWrite (VD5_EN, LOW);
-  pinMode (VCO_EN, OUTPUT);
-  digitalWrite (VCO_EN, LOW);
-  pinMode (EN_ISOLATOR, OUTPUT);
-  digitalWrite (EN_ISOLATOR, HIGH);
+  // --- Set chip select and control pins to OUTPUT and HIGH ---
+  byte highPins[] = {
+    CE_AD_DTX, CE_AD_1, CE_AD_2, CE_AD_3, CE_AD_4, CE_AD_5, CE_AD_6,
+    e2prom_CE, LE_ADF4108, EN_ISOLATOR
+  };
+  
+  for (byte i = 0; i < sizeof(highPins); i++) {
+    pinMode(highPins[i], OUTPUT);
+    digitalWrite(highPins[i], HIGH);
+  }
+  
+  // --- Set voltage enable pins to OUTPUT and LOW ---
+  byte lowPins[] = {
+    VD1_EN, VD2_EN, VD3_EN, VD4_EN, VD5_EN, VCO_EN
+  };
+  
+  for (byte i = 0; i < sizeof(lowPins); i++) {
+    pinMode(lowPins[i], OUTPUT);
+    digitalWrite(lowPins[i], LOW);
+  }
+
 
   SPI.begin();
 //  set SPI for AD5592R
@@ -468,31 +489,43 @@ void setup() {
   conf_AD5592_6 (CE_AD_6);
   conf_AD5592_DTX (CE_AD_DTX);
 
+  // Retrieve fvco value from EEPROM address 10
   EEPROM.get(10, fvco);
-  if (isnan(fvco)) {fvco = 6500; EEPROM.put(10, fvco);}
-  else if (fvco < 1000 | fvco > 8000) {fvco = 6500; EEPROM.put(10, fvco);}
-//  Serial.print(F("fvco = "));
-//  Serial.println(fvco);
   
-  if (ADF4108_REF < 1 | ADF4108_REF > 100) {ADF4108_REF = 25; EEPROM.write(19, ADF4108_REF);}
-//  Serial.print(F("ADF4108_REF = "));
-//  Serial.println(ADF4108_REF);
-
-  if (R < 1 | R > 16383) {
-    R = 48;
-    EEPROM.write(21, (R >> 8)& 0xFF);
-    EEPROM.write(20, R & 0xFF);
+  // Validate the value: if it's not a number or out of expected range, reset to default
+  if (isnan(fvco) || fvco < 1000 || fvco > 8000) {
+    fvco = 6500; // Default value
+    EEPROM.put(10, fvco); // Save corrected value back to EEPROM
   }
-//  Serial.print("R = ");
-//  Serial.println(R);
+  
+  // Read ADF4108 reference frequency from EEPROM address 19
+  EEPROM.get(19, ADF4108_REF);
+  
+  // Validate the value: must be between 1 and 100 MHz
+  if (ADF4108_REF < 1 || ADF4108_REF > 100) {
+    ADF4108_REF = 25; // Default value
+    EEPROM.write(19, ADF4108_REF); // Save corrected value
+  }
 
-  if (ADF4108_PRES > 3) {ADF4108_PRES = 2; EEPROM.write(22, ADF4108_PRES);}
+  // Validate R value: must be between 1 and 16383
+  if (R < 1 || R > 16383) {
+    R = 48; // Default value
+  
+    // Store R as two bytes in EEPROM:
+    // High byte at address 21, low byte at address 20
+    EEPROM.write(21, (R >> 8) & 0xFF); // High byte
+    EEPROM.write(20, R & 0xFF);        // Low byte
+  }
+
+  // Validate ADF4108_PRES: must be 0, 1, 2, or 3
+  if (ADF4108_PRES > 3) {
+    ADF4108_PRES = 2; // Default value
+    EEPROM.write(22, ADF4108_PRES); // Save corrected value to EEPROM
+  }
+  
+  // Set the prescaler value from the lookup array
   PRESCALER = PRESCALER_array[ADF4108_PRES];
-//  Serial.print(F("ADF4108_PRES = "));
-//  Serial.println(ADF4108_PRES);
-//  Serial.print(F("PRESCALER = "));
-//  Serial.println(PRESCALER);
-
+ 
   if (ADF4108_COUNTER_RES > 1) {ADF4108_COUNTER_RES = 0; EEPROM.write(23, ADF4108_COUNTER_RES);}
 //  Serial.print(F("ADF4108_COUNTER_RES = "));
 //  Serial.println(ADF4108_COUNTER_RES);
@@ -582,7 +615,7 @@ void setup() {
   Serial.print(F("-V_EN = "));
   Serial.println(bitRead(status, m3V_EN)); // Read bit for -V_EN
   
-  Serial.print(F("3.3_EN = "));
+  Serial.print(F("-3.3_EN = "));
   Serial.println(bitRead(status, mV_EN));  // Read bit for 3.3_EN
   
   // Check if both power enable signals are active
@@ -633,9 +666,9 @@ void setup() {
         break;
     }
 
-  // Final check: both cables must be OK to proceed
-  boot_ok = (cbl_1 == 2 && cbl_2 == 2);
-}
+    // Final check: both cables must be OK to proceed
+    boot_ok = (cbl_1 == 2 && cbl_2 == 2);
+  }
 
   
 
@@ -667,7 +700,7 @@ void setup() {
       int i = seq[a];
       double vout;
       EEPROM.get((140+(a*4)), vout);
-      Serial.print(140+(a*4)); Serial.print(" = "); Serial.println(vout);  
+      //Serial.print(140+(a*4)); Serial.print(" = "); Serial.println(vout);  
       if (vout >= array_set_reg_LL[i] && vout <= array_set_reg_LH[i]) {  
         double ofs = read_ofs(i);         
         double k = read_k(i); 
@@ -718,10 +751,9 @@ void loop() {
         print_ok();
       }  
       else if (command.charAt(0) == 'S'){
-        if ((command.substring(2).toInt()) < 65536){
+        if ((command.substring(2).toInt()) < 255){
           sn = command.substring(2).toInt();
-          EEPROM.write(1, (sn >> 8)& 0xFF);
-          EEPROM.write(0, sn & 0xFF);
+          EEPROM.write(0, sn);
           Serial.println(sn);
           print_ok();
         }
@@ -729,7 +761,7 @@ void loop() {
       }
 
       else if (command.charAt(0) == 'G' && command.charAt(1) == 'E'){
-        if ((command.substring(3).toInt()) < 1024 && (command.substring(3).toInt()) > 99){
+        if ((((command.substring(3).toInt()) < 1024) && ((command.substring(3).toInt()) > 99)) || ((command.substring(3).toInt()) == 10) ){
           double value;
           EEPROM.get((command.substring(3).toInt()), value);
 //          Serial.print("eeprom get double[");
