@@ -8,29 +8,29 @@ PE 124,0     #Vref_cloop_min
 PE 128,2.4   #Vref_cloop_max
 PE 132,-2    #Vg_pa_min
 PE 136,-0.3  #Vg_pa_max
-PE 140,2
-PE 144,2
-PE 148,2
-PE 152,2
-PE 156,2
-PE 160,-2
-PE 164,-2
-PE 168,-2
-PE 172,-2
-PE 176,-2
-PE 180,-2
-PE 184,-2
-PE 188,-2
-PE 192,-2
-PE 196,0
-PE 200,0
-PE 204,0
-PE 208,0
-PE 212,0
-PE 216,0
-PE 220,0
-PE 224,0
-PE 228,-2
-PE 232,-2
-PE 236,-2
-PE 240,-2
+PE 140,2     #VD1
+PE 144,2     #VD2
+PE 148,2     #VD3
+PE 152,2     #VD4
+PE 156,2     #VD5
+PE 160,-2    #FREE
+PE 164,-2    #Vg_buff
+PE 168,-2    #Vg_x2
+PE 172,-2    #Vg1_drv
+PE 176,-2    #Vg2_drv
+PE 180,-2    #Vg_mix
+PE 184,-2    #Vg_VGA1
+PE 188,-2    #Vg_VGA2
+PE 192,-2    #FREE
+PE 196,0     #V_I
+PE 200,0     #V_IN
+PE 204,0     #V_Q
+PE 208,0     #V_QN
+PE 212,0     #Vref_PA_I_cloop
+PE 216,0     #Vref_PA_II_cloop
+PE 220,0     #Vref_PA_III_cloop
+PE 224,0     #Vref_PA_IV_cloop
+PE 228,-2    #Vg_PA_I_fwd
+PE 232,-2    #Vg_PA_II_fwd
+PE 236,-2    #Vg_PA_III_fwd
+PE 240,-2    #Vg_PA_IV_fwd
