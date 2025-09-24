@@ -982,9 +982,9 @@ void loop() {
           if (db_code > 0.1 && db_code < 0.3) {
               Serial.println(F("Sip-eBand_TX"));
           }
-          else if (db_code > 0.31 && db_code < 0.5) {
-              Serial.println(F("Sip-eBand_RX"));
-          }
+//          else if (db_code > 0.31 && db_code < 0.5) {
+//              Serial.println(F("Sip-eBand_RX"));
+//          }
       
           // Indicate successful operation
           print_ok();
@@ -1020,106 +1020,328 @@ void loop() {
       }
 
 //*************************out command*************************************
-      else if (command.substring(0, 3) == "out"){
-        if (command.substring(7, 4) == "get"){         
-          String vdx = command.substring(11, 8);
-          bool found = false;
-          int i = 0;
-          while (i < array_vd_en_lenght & !found) {
-            if (vdx == cmd_vd[i]){
-              Serial.println(digitalRead(array_vd_en[i]));
-              found = true;
-            }
-            else i++;
-          }
-          if (found){print_ok();} else print_cmd_nfound();
-        }
-        else if (command.substring(7, 4) == "set"){         
-         if (is_numeric(command.substring(12))){
-           if ((command.substring(12).toInt()) < 2) {
-              String vdx = command.substring(11, 8);
-              bool found = false;
-              int i = 0;
-              while (i < array_vd_en_lenght & !found) {
-                if (vdx == cmd_vd[i]){
-                  DW_32u4 (array_vd_en[i], command.substring(12).toInt());
-                  delay(200);
-                  if ((vdx == "vco") && (bool)command.substring(12).toInt()){
-                    reg_calc();
-                    write_adf4108(INIT_Reg);
-                    write_adf4108(REF_Reg);
-                    write_adf4108(AB_Reg);
-                  }
-                  found = true;
-                }
-                else i++;
-              }
-              if (found){print_ok();} else print_cmd_nfound();
-            }       
-            else print_exc_limit();
-          }
-          else {print_isnt_num();}
-        }
-        else print_cmd_nfound();
+//      else if (command.substring(0, 3) == "out"){
+//        if (command.substring(7, 4) == "get"){         
+//          String vdx = command.substring(11, 8);
+//          bool found = false;
+//          int i = 0;
+//          while (i < array_vd_en_lenght & !found) {
+//            if (vdx == cmd_vd[i]){
+//              Serial.println(digitalRead(array_vd_en[i]));
+//              found = true;
+//            }
+//            else i++;
+//          }
+//          if (found){print_ok();} else print_cmd_nfound();
+//        }
+//        else if (command.substring(7, 4) == "set"){         
+//         if (is_numeric(command.substring(12))){
+//           if ((command.substring(12).toInt()) < 2) {
+//              String vdx = command.substring(11, 8);
+//              bool found = false;
+//              int i = 0;
+//              while (i < array_vd_en_lenght & !found) {
+//                if (vdx == cmd_vd[i]){
+//                  DW_32u4 (array_vd_en[i], command.substring(12).toInt());
+//                  delay(200);
+//                  if ((vdx == "vco") && (bool)command.substring(12).toInt()){
+//                    reg_calc();
+//                    write_adf4108(INIT_Reg);
+//                    write_adf4108(REF_Reg);
+//                    write_adf4108(AB_Reg);
+//                  }
+//                  found = true;
+//                }
+//                else i++;
+//              }
+//              if (found){print_ok();} else print_cmd_nfound();
+//            }       
+//            else print_exc_limit();
+//          }
+//          else {print_isnt_num();}
+//        }
+//        else print_cmd_nfound();
+//      }
+
+// Check if the command starts with "out"
+else if (command.substring(0, 3) == "out") {
+
+  // Handle "get" command
+  if (command.substring(7, 4) == "get") {
+    String vdx = command.substring(11, 8); // Extract virtual device ID
+    bool found = false;
+    int i = 0;
+
+    // Search for the virtual device in the list
+    while (i < array_vd_en_lenght && !found) {
+      if (vdx == cmd_vd[i]) {
+        Serial.println(digitalRead(array_vd_en[i])); // Print digital value
+        found = true;
+      } else {
+        i++;
       }
+    }
+
+    // Print result based on whether the device was found
+    if (found) {
+      print_ok(); // Success
+    } else {
+      print_cmd_nfound(); // Device not found
+    }
+  }
+
+  // Handle "set" command
+  else if (command.substring(7, 4) == "set") {
+
+    // Check if the value is numeric
+    if (is_numeric(command.substring(12))) {
+
+      // Check if the value is within allowed range (0 or 1)
+      if (command.substring(12).toInt() < 2) {
+        String vdx = command.substring(11, 8); // Extract virtual device ID
+        bool found = false;
+        int i = 0;
+
+        // Search for the virtual device in the list
+        while (i < array_vd_en_lenght && !found) {
+          if (vdx == cmd_vd[i]) {
+            // Set the digital output
+            DW_32u4(array_vd_en[i], command.substring(12).toInt());
+            delay(200);
+
+            // Special handling for "vco" device
+            if (vdx == "vco" && (bool)command.substring(12).toInt()) {
+              reg_calc();
+              write_adf4108(INIT_Reg);
+              write_adf4108(REF_Reg);
+              write_adf4108(AB_Reg);
+            }
+
+            found = true;
+          } else {
+            i++;
+          }
+        }
+
+        // Print result based on whether the device was found
+        if (found) {
+          print_ok(); // Success
+        } else {
+          print_cmd_nfound(); // Device not found
+        }
+      } else {
+        print_exc_limit(); // Value out of allowed range
+      }
+    } else {
+      print_isnt_num(); // Value is not numeric
+    }
+  }
+
+  // If neither "get" nor "set" is matched
+  else {
+    print_cmd_nfound(); // Unknown sub-command
+  }
+}
+
+
 //*************************set command*************************************
-      else if (command.substring(0, 3) == "set"){
-        byte space_pos = command.indexOf(' ');
-//        Serial.print("space_pos = "); Serial.println(space_pos);
-        if (is_numeric(command.substring(space_pos + 1))){
-          double vout = command.substring(space_pos + 1).toDouble();
-          String setx = command.substring(space_pos, 0);
-          found = false;
-          int i = find_index_cmd_get_set (setx);
-//          Serial.print("command = "); Serial.println(setx);
-//          Serial.print("vout = "); Serial.println(vout, 3);
-          if (found){
-//            Serial.print("comando trovato = "); Serial.print(setx); Serial.print(" indice = "); Serial.println(i);
-            if (vout >= array_set_reg_LL[i] && vout <= array_set_reg_LH[i]) {
-              double ofs = read_ofs(i);         
-              double k = read_k(i);            
-              double vda = 0;
-              byte calc = array_calc[i];
-              bool dis_isolator = array_dis_isolator[i];
-              if (calc == 1) {vda = (ofs - vout) / k;}
-              else if (calc == 2) {vda = (vout / k) + ofs;}
-              else if (calc == 4) {vda = (vout + ofs) * k;}
-              if (vda >= Vmin_AD5592 && vda <= Vmax_AD5592){
-                if (dis_isolator) {digitalWrite(EN_ISOLATOR, LOW);}
-                AW_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], vda); if (DAC_readback) {print_ok();} else print_error_DAC_readback();
-                if (dis_isolator) {digitalWrite(EN_ISOLATOR, HIGH);}
-              }
-              else print_vdac_exc();
-            }
-            else print_exc_limit();
+//      else if (command.substring(0, 3) == "set"){
+//        byte space_pos = command.indexOf(' ');
+////        Serial.print("space_pos = "); Serial.println(space_pos);
+//        if (is_numeric(command.substring(space_pos + 1))){
+//          double vout = command.substring(space_pos + 1).toDouble();
+//          String setx = command.substring(space_pos, 0);
+//          found = false;
+//          int i = find_index_cmd_get_set (setx);
+////          Serial.print("command = "); Serial.println(setx);
+////          Serial.print("vout = "); Serial.println(vout, 3);
+//          if (found){
+////            Serial.print("comando trovato = "); Serial.print(setx); Serial.print(" indice = "); Serial.println(i);
+//            if (vout >= array_set_reg_LL[i] && vout <= array_set_reg_LH[i]) {
+//              double ofs = read_ofs(i);         
+//              double k = read_k(i);            
+//              double vda = 0;
+//              byte calc = array_calc[i];
+//              bool dis_isolator = array_dis_isolator[i];
+//              if (calc == 1) {vda = (ofs - vout) / k;}
+//              else if (calc == 2) {vda = (vout / k) + ofs;}
+//              else if (calc == 4) {vda = (vout + ofs) * k;}
+//              if (vda >= Vmin_AD5592 && vda <= Vmax_AD5592){
+//                if (dis_isolator) {digitalWrite(EN_ISOLATOR, LOW);}
+//                AW_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], vda); if (DAC_readback) {print_ok();} else print_error_DAC_readback();
+//                if (dis_isolator) {digitalWrite(EN_ISOLATOR, HIGH);}
+//              }
+//              else print_vdac_exc();
+//            }
+//            else print_exc_limit();
+//          }
+//          else print_cmd_nfound();
+//        }
+//        else {print_isnt_num();}
+//      }
+
+// Check if the command starts with "set"
+else if (command.substring(0, 3) == "set") {
+
+  // Find the position of the first space character
+  byte space_pos = command.indexOf(' ');
+
+  // Check if the value after the space is numeric
+  if (is_numeric(command.substring(space_pos + 1))) {
+
+    // Convert the value to double
+    double vout = command.substring(space_pos + 1).toDouble();
+
+    // Extract the command keyword before the space
+    String setx = command.substring(0, space_pos);
+
+    found = false;
+
+    // Find the index of the command in the list
+    int i = find_index_cmd_get_set(setx);
+
+    // If the command was found
+    if (found) {
+
+      // Check if the value is within the allowed range
+      if (vout >= array_set_reg_LL[i] && vout <= array_set_reg_LH[i]) {
+
+        // Read calibration parameters
+        double ofs = read_ofs(i);
+        double k = read_k(i);
+        double vda = 0;
+
+        // Get calculation method and isolator flag
+        byte calc = array_calc[i];
+        bool dis_isolator = array_dis_isolator[i];
+
+        // Apply the appropriate formula based on the calculation method
+        if (calc == 1) {
+          vda = (ofs - vout) / k;
+        } else if (calc == 2) {
+          vda = (vout / k) + ofs;
+        } else if (calc == 4) {
+          vda = (vout + ofs) * k;
+        }
+
+        // Check if the calculated DAC value is within valid range
+        if (vda >= Vmin_AD5592 && vda <= Vmax_AD5592) {
+
+          // Disable isolator if required
+          if (dis_isolator) {
+            digitalWrite(EN_ISOLATOR, LOW);
           }
-          else print_cmd_nfound();
+
+          // Write value to DAC
+          AW_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], vda);
+
+          // Confirm write success
+          if (DAC_readback) {
+            print_ok();
+          } else {
+            print_error_DAC_readback();
+          }
+
+          // Re-enable isolator if it was disabled
+          if (dis_isolator) {
+            digitalWrite(EN_ISOLATOR, HIGH);
+          }
+
+        } else {
+          print_vdac_exc(); // DAC value out of range
         }
-        else {print_isnt_num();}
+
+      } else {
+        print_exc_limit(); // Output value out of allowed range
       }
+
+    } else {
+      print_cmd_nfound(); // Command not found
+    }
+
+  } else {
+    print_isnt_num(); // Value is not numeric
+  }
+}
+
+
 //*************************get command*************************************
-      else if (command.substring(0, 3) == "get"){
-//        Serial.print("command = ");
-//        Serial.println(command);
-        found = false;
-        int i = find_index_cmd_get_set (command);
-//        Serial.print("found = ");
-//        Serial.println(found);
-//        Serial.print("i = ");
-//        Serial.println(i);
-        if (found){   
-          double ofs = read_ofs(i);          
-          double k = read_k(i);
-          byte calc = array_calc[i];
-          bool dis_isolator = array_dis_isolator[i];
-          if (dis_isolator) {digitalWrite(EN_ISOLATOR, LOW);}
-          if (calc == 5) Serial.println((74.479 * (AR_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], ofs, k))) - 61.445, 1);//temp linear
-          else Serial.println(AR_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], ofs, k), 3);
-          if (dis_isolator) {digitalWrite(EN_ISOLATOR, HIGH);}
-          print_ok();
-        }
-        else print_cmd_nfound();
-      }
+//      else if (command.substring(0, 3) == "get"){
+////        Serial.print("command = ");
+////        Serial.println(command);
+//        found = false;
+//        int i = find_index_cmd_get_set (command);
+////        Serial.print("found = ");
+////        Serial.println(found);
+////        Serial.print("i = ");
+////        Serial.println(i);
+//        if (found){   
+//          double ofs = read_ofs(i);          
+//          double k = read_k(i);
+//          byte calc = array_calc[i];
+//          bool dis_isolator = array_dis_isolator[i];
+//          if (dis_isolator) {digitalWrite(EN_ISOLATOR, LOW);}
+//          if (calc == 5) Serial.println((74.479 * (AR_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], ofs, k))) - 61.445, 1);//temp linear
+//          else Serial.println(AR_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], ofs, k), 3);
+//          if (dis_isolator) {digitalWrite(EN_ISOLATOR, HIGH);}
+//          print_ok();
+//        }
+//        else print_cmd_nfound();
+//      }
+
+// Check if the command starts with "get"
+else if (command.substring(0, 3) == "get") {
+
+  // Optional debug output
+  // Serial.print("command = ");
+  // Serial.println(command);
+
+  found = false;
+
+  // Find the index of the command in the list
+  int i = find_index_cmd_get_set(command);
+
+  // Optional debug output
+  // Serial.print("found = ");
+  // Serial.println(found);
+  // Serial.print("i = ");
+  // Serial.println(i);
+
+  // If the command was found
+  if (found) {
+
+    // Read calibration parameters
+    double ofs = read_ofs(i);
+    double k = read_k(i);
+    byte calc = array_calc[i];
+    bool dis_isolator = array_dis_isolator[i];
+
+    // Disable isolator if required
+    if (dis_isolator) {
+      digitalWrite(EN_ISOLATOR, LOW);
+    }
+
+    // Special case: temperature linear conversion
+    if (calc == 5) {
+      Serial.println((74.479 * AR_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], ofs, k)) - 61.445, 1);
+    } else {
+      // Standard analog read with calibration
+      Serial.println(AR_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i], ofs, k), 3);
+    }
+
+    // Re-enable isolator if it was disabled
+    if (dis_isolator) {
+      digitalWrite(EN_ISOLATOR, HIGH);
+    }
+
+    print_ok(); // Command executed successfully
+
+  } else {
+    print_cmd_nfound(); // Command not recognized
+  }
+}
+
+
 //*************************reg command*************************************
       else if (command.substring(0, 3) == "reg"){
         found = false;
@@ -1204,7 +1426,9 @@ void loop() {
               // Value is out of range, print error
               print_exc_limit();
           }
-      } 
+      }
+
+ 
       else {
         if (command != ""){
             print_cmd_nfound();
@@ -1492,33 +1716,33 @@ void print_cmdlist() {
   Serial.println();
   
   Serial.println(F("32u4:"));
-  Serial.println(F("out.set.[vd1-vd2-vd3-vd5-vd5-vco] [0->Disabled, 1->Enabled]"));
-  Serial.println(F("out.get.[vd1-vd2-vd3-vd5-vd5-vco (read state, 0->Disabled, 1->Enabled)"));
-  Serial.println(F("idvco [read current(A)]"));
-  Serial.println();
+  Serial.println(F("out.set.vd[1-2-3-4-5-vco] [0->Disabled, 1->Enabled]"));
+  Serial.println(F("out.get.vd[1-2-3-4-5-vco] (read state, 0->Disabled, 1->Enabled)"));
+  Serial.println(F("idvco [read current(A)]\n"));
+//  Serial.println();
   
   Serial.println(F("AD_1:"));
-  Serial.print(F("set.[vd1-vd2-vd3-vd5-vd5-vco] [")); Serial.print(VD_min); Serial.print(F(" to ")); Serial.print(VD_max); Serial.println(F(" set volt]"));
-  Serial.println(F("get.[id3-id4-id5] (read current(A))"));
+  Serial.print(F("set.vd[1-2-3-4-5-vco] [")); Serial.print(VD_min); Serial.print(F(" to ")); Serial.print(VD_max); Serial.println(F(" set volt]"));
+  Serial.println(F("get.id3-4-5] (read current(A))"));
   Serial.println();
 
   Serial.println(F("AD_2:"));
-  Serial.println(F("get.[vd1-vd2-vd3-vd5-vd5-temp] (read volt(V))"));
-  Serial.print(F("set.[ad2.6] [")); Serial.print(VgGAAS_min); Serial.print(F(" to ")); Serial.print(Vc_SIGE_max); Serial.println(F(" set volt]"));
+  Serial.println(F("get.vd[1-2-3-4-5-temp] (read volt(V))"));
+  Serial.print(F("set.ad2.6 [")); Serial.print(VgGAAS_min); Serial.print(F(" to ")); Serial.print(Vc_SIGE_max); Serial.println(F(" set volt]"));
   Serial.println();
 
   Serial.println(F("AD_3:"));
-  Serial.print(F("set.[ad3.0-ad3.1-ad3.2-ad3.3-ad3.4-ad3.5-ad3.6-ad3.7] [")); Serial.print(VgGAAS_min); Serial.print(F(" to ")); Serial.print(Vc_SIGE_max); Serial.println(F(" set volt]"));
+  Serial.print(F("set.ad3.[0 to 7] [")); Serial.print(VgGAAS_min); Serial.print(F(" to ")); Serial.print(Vc_SIGE_max); Serial.println(F(" set volt]"));
   Serial.println();
  
   Serial.println(F("AD_4:"));
-  Serial.print(F("set.[ad4.0-ad4.1-ad4.2-ad4.3] [")); Serial.print(Vif_min); Serial.print(F(" to ")); Serial.print(Vif_max); Serial.println(F(" set volt]"));
+  Serial.print(F("set.ad4.[0-1-2-3] [")); Serial.print(Vif_min); Serial.print(F(" to ")); Serial.print(Vif_max); Serial.println(F(" set volt]"));
   Serial.println(F("get.pll-lock [0-> UNLOCK, 3.3V->LOCKED]"));
-  Serial.println(F("get.[ad4.5-ad4.6-ad4.7] (read volt(V))"));
+  Serial.println(F("get.ad4.[5-6-7] (read volt(V))"));
   Serial.println();
 
   Serial.println(F("AD_5:"));
-  Serial.println(F("get.[ad5.0-ad5.1-ad5.2-ad5.3-ad5.4-ad5.5-ad5.6-ad5.7] (read volt(V))"));
+  Serial.println(F("get.ad5.[0 to 7] (read volt(V))"));
   Serial.println();
 
   Serial.println(F("AD_6:"));
@@ -1532,14 +1756,14 @@ void print_cmdlist() {
   Serial.println();
 
   Serial.println(F("AD5592_DTX:"));
-  Serial.print(("set.dtx.0 [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
-  Serial.print(("set.dtx.1 [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
-  Serial.print(("set.dtx.2 [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
-  Serial.print(("set.dtx.3 [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
-  Serial.print(("set.dtx.4 [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
-  Serial.print(("set.dtx.5 [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
-  Serial.print(("set.dtx.6 [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
-  Serial.print(("set.dtx.7 [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
+  Serial.print(("set.dtx.[0-1-2-3]] [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
+//  Serial.print(("set.dtx.1 [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
+//  Serial.print(("set.dtx.2 [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
+//  Serial.print(("set.dtx.3 [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
+  Serial.print(("set.dtx.[4-5-6-7] [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
+//  Serial.print(("set.dtx.5 [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
+//  Serial.print(("set.dtx.6 [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
+//  Serial.print(("set.dtx.7 [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
 
   Serial.println(F("*********************"));
 }
