@@ -408,6 +408,8 @@ union{
   double num;
 } doub2arr;
 
+//#define COMMAND_READ_AD5592_REGISTER
+
 //*************************void setup*************************************
 void setup() {
 //  while (!Serial) {}
@@ -1343,6 +1345,7 @@ else if (command.substring(0, 3) == "get") {
 
 
 //*************************reg command*************************************
+    #ifdef COMMAND_READ_AD5592_REGISTER
       else if (command.substring(0, 3) == "reg"){
         found = false;
         int i = find_index_cmd_reg (command);
@@ -1375,7 +1378,7 @@ else if (command.substring(0, 3) == "get") {
         }
         else print_cmd_nfound();
       }
-
+    #endif
       //      else if (command == "fvco"){
       //        Serial.println(fvco);
       //        print_ok();
@@ -1591,98 +1594,182 @@ int find_index_cmd_get_set (String command) {
   return index;
 }
 
-int find_index_cmd_reg (String command) {
-//  Serial.print("command = ");
-//  Serial.println(command);
-  int index = 0;
-  if (command == "reg.vd1") {index = 0; found = true;}
-  else if (command == "reg.vd2") {index = 1; found = true;}
-  else if (command == "reg.vd3") {index = 2; found = true;}
-  else if (command == "reg.vd4") {index = 3; found = true;}
-  else if (command == "reg.vd5") {index = 4; found = true;}
-//  else if (command == ".") {index = 5; found = true;}
-//  else if (command == ".") {index = 6; found = true;}
-//  else if (command == ".") {index = 7; found = true;}
-//  else if (command == ".") {index = 8; found = true;}
-//  else if (command == ".") {index = 9; found = true;}
-//  else if (command == ".") {index = 10; found = true;}
-//  else if (command == ".") {index = 11; found = true;}
-//  else if (command == ".") {index = 12; found = true;}
-//  else if (command == ".") {index = 13; found = true;}
-  else if (command == "reg.ad2.6") {index = 14; found = true;}
-  else if (command == "reg.ad2.7") {index = 15; found = true;}
-  else if (command == "reg.ad3.0") {index = 16; found = true;}
-  else if (command == "reg.ad3.1") {index = 17; found = true;}
-  else if (command == "reg.ad3.2") {index = 18; found = true;}
-  else if (command == "reg.ad3.3") {index = 19; found = true;}
-  else if (command == "reg.ad3.4") {index = 20; found = true;}
-  else if (command == "reg.ad3.5") {index = 21; found = true;}
-  else if (command == "reg.ad3.6") {index = 22; found = true;}
-  else if (command == "reg.ad3.7") {index = 23; found = true;}
-  else if (command == "reg.ad4.0") {index = 24; found = true;}
-  else if (command == "reg.ad4.1") {index = 25; found = true;}
-  else if (command == "reg.ad4.2") {index = 26; found = true;}
-  else if (command == "reg.ad4.3") {index = 27; found = true;}
-//  else if (command == ".") {index = 28; found = true;}
-//  else if (command == ".") {index = 29; found = true;}
-//  else if (command == ".") {index = 30; found = true;}
-//  else if (command == ".") {index = 31; found = true;}
-//  else if (command == ".") {index = 32; found = true;}
-//  else if (command == ".") {index = 33; found = true;}
-//  else if (command == ".") {index = 34; found = true;}
-//  else if (command == ".") {index = 35; found = true;}
-//  else if (command == ".") {index = 36; found = true;}
-//  else if (command == ".") {index = 37; found = true;}
-//  else if (command == ".") {index = 38; found = true;}
-//  else if (command == ".") {index = 39; found = true;}
-  else if (command == "reg.dtx.0") {index = 40; if (true){found = true;}}
-  else if (command == "reg.dtx.1") {index = 41; if (true){found = true;}}
-  else if (command == "reg.dtx.2") {index = 42; if (true){found = true;}}
-  else if (command == "reg.dtx.3") {index = 43; if (true){found = true;}}
-  else if (command == "reg.dtx.4") {index = 44; if (true){found = true;}}
-  else if (command == "reg.dtx.5") {index = 45; if (true){found = true;}}
-  else if (command == "reg.dtx.6") {index = 46; if (true){found = true;}}
-  else if (command == "reg.dtx.7") {index = 47; if (true){found = true;}}
-//  Serial.print("found = ");
-//  Serial.println(found);
-//  Serial.print("index = ");
-//  Serial.println(index);
-  return index;
-}
+#ifdef COMMAND_READ_AD5592_REGISTER
+  int find_index_cmd_reg (String command) {
+  //  Serial.print("command = ");
+  //  Serial.println(command);
+    int index = 0;
+    if (command == "reg.vd1") {index = 0; found = true;}
+    else if (command == "reg.vd2") {index = 1; found = true;}
+    else if (command == "reg.vd3") {index = 2; found = true;}
+    else if (command == "reg.vd4") {index = 3; found = true;}
+    else if (command == "reg.vd5") {index = 4; found = true;}
+  //  else if (command == ".") {index = 5; found = true;}
+  //  else if (command == ".") {index = 6; found = true;}
+  //  else if (command == ".") {index = 7; found = true;}
+  //  else if (command == ".") {index = 8; found = true;}
+  //  else if (command == ".") {index = 9; found = true;}
+  //  else if (command == ".") {index = 10; found = true;}
+  //  else if (command == ".") {index = 11; found = true;}
+  //  else if (command == ".") {index = 12; found = true;}
+  //  else if (command == ".") {index = 13; found = true;}
+    else if (command == "reg.ad2.6") {index = 14; found = true;}
+    else if (command == "reg.ad2.7") {index = 15; found = true;}
+    else if (command == "reg.ad3.0") {index = 16; found = true;}
+    else if (command == "reg.ad3.1") {index = 17; found = true;}
+    else if (command == "reg.ad3.2") {index = 18; found = true;}
+    else if (command == "reg.ad3.3") {index = 19; found = true;}
+    else if (command == "reg.ad3.4") {index = 20; found = true;}
+    else if (command == "reg.ad3.5") {index = 21; found = true;}
+    else if (command == "reg.ad3.6") {index = 22; found = true;}
+    else if (command == "reg.ad3.7") {index = 23; found = true;}
+    else if (command == "reg.ad4.0") {index = 24; found = true;}
+    else if (command == "reg.ad4.1") {index = 25; found = true;}
+    else if (command == "reg.ad4.2") {index = 26; found = true;}
+    else if (command == "reg.ad4.3") {index = 27; found = true;}
+  //  else if (command == ".") {index = 28; found = true;}
+  //  else if (command == ".") {index = 29; found = true;}
+  //  else if (command == ".") {index = 30; found = true;}
+  //  else if (command == ".") {index = 31; found = true;}
+  //  else if (command == ".") {index = 32; found = true;}
+  //  else if (command == ".") {index = 33; found = true;}
+  //  else if (command == ".") {index = 34; found = true;}
+  //  else if (command == ".") {index = 35; found = true;}
+  //  else if (command == ".") {index = 36; found = true;}
+  //  else if (command == ".") {index = 37; found = true;}
+  //  else if (command == ".") {index = 38; found = true;}
+  //  else if (command == ".") {index = 39; found = true;}
+    else if (command == "reg.dtx.0") {index = 40; if (true){found = true;}}
+    else if (command == "reg.dtx.1") {index = 41; if (true){found = true;}}
+    else if (command == "reg.dtx.2") {index = 42; if (true){found = true;}}
+    else if (command == "reg.dtx.3") {index = 43; if (true){found = true;}}
+    else if (command == "reg.dtx.4") {index = 44; if (true){found = true;}}
+    else if (command == "reg.dtx.5") {index = 45; if (true){found = true;}}
+    else if (command == "reg.dtx.6") {index = 46; if (true){found = true;}}
+    else if (command == "reg.dtx.7") {index = 47; if (true){found = true;}}
+  //  Serial.print("found = ");
+  //  Serial.println(found);
+  //  Serial.print("index = ");
+  //  Serial.println(index);
+    return index;
+  }
+#endif
 
-double read_ofs(int x){        
+//double read_ofs(int x){        
+//  double ofs;
+//  if (false){//(x > 39)
+//    ofs = e2prom_get(add_str_ofs_M+(x*8));
+//    if (isnan(ofs)) {ofs = 0; e2prom_put((add_str_ofs_M+(x*8)), ofs);}
+//    else if (ofs < -1000 | ofs > 1000) {ofs = 0; e2prom_put((add_str_ofs_M+(x*8)), ofs);}
+//  }
+//  else{
+//    EEPROM.get((add_str_ofs+(x*8)), ofs);
+//    if (isnan(ofs)) {ofs = 0; EEPROM.put((add_str_ofs+(x*8)), ofs);}
+//    else if (ofs < -1000 | ofs > 1000) {ofs = 0; EEPROM.put((add_str_ofs+(x*8)), ofs);}
+//  }
+////  Serial.print("ofs = ");
+////  Serial.println(ofs);
+//  return ofs;
+//}
+
+// Function to read a double offset value from EEPROM or custom memory
+double read_ofs(int x) {
   double ofs;
-  if (false){//(x > 39)
-    ofs = e2prom_get(add_str_ofs_M+(x*8));
-    if (isnan(ofs)) {ofs = 0; e2prom_put((add_str_ofs_M+(x*8)), ofs);}
-    else if (ofs < -1000 | ofs > 1000) {ofs = 0; e2prom_put((add_str_ofs_M+(x*8)), ofs);}
+
+  // This block is currently disabled (false condition)
+  // It would read from a custom memory function (e2prom_get)
+  if (false) { // (x > 39)
+    ofs = e2prom_get(add_str_ofs_M + (x * 8));
+
+    // If the value is NaN, reset to 0 and store it
+    if (isnan(ofs)) {
+      ofs = 0;
+      e2prom_put(add_str_ofs_M + (x * 8), ofs);
+    }
+    // If the value is out of valid range, reset to 0 and store it
+    else if (ofs < -1000 || ofs > 1000) {
+      ofs = 0;
+      e2prom_put(add_str_ofs_M + (x * 8), ofs);
+    }
   }
-  else{
-    EEPROM.get((add_str_ofs+(x*8)), ofs);
-    if (isnan(ofs)) {ofs = 0; EEPROM.put((add_str_ofs+(x*8)), ofs);}
-    else if (ofs < -1000 | ofs > 1000) {ofs = 0; EEPROM.put((add_str_ofs+(x*8)), ofs);}
+  // Default block: read from standard EEPROM
+  else {
+    EEPROM.get(add_str_ofs + (x * 8), ofs);
+
+    // If the value is NaN, reset to 0 and store it
+    if (isnan(ofs)) {
+      ofs = 0;
+      EEPROM.put(add_str_ofs + (x * 8), ofs);
+    }
+    // If the value is out of valid range, reset to 0 and store it
+    else if (ofs < -1000 || ofs > 1000) {
+      ofs = 0;
+      EEPROM.put(add_str_ofs + (x * 8), ofs);
+    }
   }
-//  Serial.print("ofs = ");
-//  Serial.println(ofs);
+
+  // Return the validated offset value
   return ofs;
 }
 
-double read_k(int x){
+
+//double read_k(int x){
+//  double k;
+//  if (false){//(x > 39)
+//    k = e2prom_get(add_str_k_M+(x*8));
+//    if (isnan(k)) {k = 1; e2prom_put((add_str_k_M+(x*8)), k);}
+//    else if (k < -1000 | k > 1000) {k = 1; e2prom_put((add_str_k_M+(x*8)), k);}
+//  }
+//  else{
+//    EEPROM.get((add_str_k+(x*8)), k);
+//    if (isnan(k)) {k = 1; EEPROM.put((add_str_k+(x*8)), k);}
+//    else if (k < -1000 | k > 1000) {k = 1; EEPROM.put((add_str_k+(x*8)), k);}
+//  }
+////  Serial.print("k = ");
+////  Serial.println(k);
+//  return k;
+//}
+
+// Function to read a double coefficient 'k' from EEPROM or custom memory
+double read_k(int x) {
   double k;
-  if (false){//(x > 39)
-    k = e2prom_get(add_str_k_M+(x*8));
-    if (isnan(k)) {k = 1; e2prom_put((add_str_k_M+(x*8)), k);}
-    else if (k < -1000 | k > 1000) {k = 1; e2prom_put((add_str_k_M+(x*8)), k);}
+
+  // This block is currently disabled (false condition)
+  // It would read from a custom memory function (e2prom_get)
+  if (false) { // (x > 39)
+    k = e2prom_get(add_str_k_M + (x * 8));
+
+    // If the value is NaN, reset to 1 and store it
+    if (isnan(k)) {
+      k = 1;
+      e2prom_put(add_str_k_M + (x * 8), k);
+    }
+    // If the value is out of valid range, reset to 1 and store it
+    else if (k < -1000 || k > 1000) {
+      k = 1;
+      e2prom_put(add_str_k_M + (x * 8), k);
+    }
   }
-  else{
-    EEPROM.get((add_str_k+(x*8)), k);
-    if (isnan(k)) {k = 1; EEPROM.put((add_str_k+(x*8)), k);}
-    else if (k < -1000 | k > 1000) {k = 1; EEPROM.put((add_str_k+(x*8)), k);}
+  // Default block: read from standard EEPROM
+  else {
+    EEPROM.get(add_str_k + (x * 8), k);
+
+    // If the value is NaN, reset to 1 and store it
+    if (isnan(k)) {
+      k = 1;
+      EEPROM.put(add_str_k + (x * 8), k);
+    }
+    // If the value is out of valid range, reset to 1 and store it
+    else if (k < -1000 || k > 1000) {
+      k = 1;
+      EEPROM.put(add_str_k + (x * 8), k);
+    }
   }
-//  Serial.print("k = ");
-//  Serial.println(k);
+
+  // Return the validated coefficient
   return k;
 }
+
 
 void print_cmdlist() {
   Serial.println();
@@ -2100,19 +2187,41 @@ float AR_32u4 (int ai, double ofs, double k){
   return result;
 }
 
-bool is_numeric(String param) {
-  int i;
-  bool d = true;
-  if (param.length() > 0 && param[0] != '.'){
-      for (i=0; i<param.length(); i++) {
-      if (!(isDigit(param[i]) | (param[i] == '.' | (param[i] == '-')))) d = false;
+//bool is_numeric(String param) {
+//  int i;
+//  bool d = true;
+//  if (param.length() > 0 && param[0] != '.'){
+//      for (i=0; i<param.length(); i++) {
+//      if (!(isDigit(param[i]) | (param[i] == '.' | (param[i] == '-')))) d = false;
+//    }
+//  }
+//  else d = false;
+////  Serial.print("is_numeric = ");
+////  Serial.println(d);  
+//  return d;
+//}
+
+
+// Function to check if a string represents a numeric value
+bool is_numeric(const String& param) {
+  // Return false if the string is empty or starts with a dot
+  if (param.length() == 0 || param[0] == '.') return false;
+
+  // Loop through each character in the string
+  for (int i = 0; i < param.length(); i++) {
+    char c = param[i];
+
+    // If the character is not a digit, a dot, or a minus sign, return false
+    if (!isDigit(c) && c != '.' && c != '-') {
+      return false;
     }
   }
-  else d = false;
-//  Serial.print("is_numeric = ");
-//  Serial.println(d);  
-  return d;
+
+  // If all characters are valid, return true
+  return true;
 }
+
+
 
 //int WaitAndReadOneByte() {
 //  while (!Serial.available()) {}
