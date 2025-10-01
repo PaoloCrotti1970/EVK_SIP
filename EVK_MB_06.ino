@@ -408,7 +408,7 @@ union{
   double num;
 } doub2arr;
 
-//#define COMMAND_READ_AD5592_REGISTER
+#define COMMAND_READ_AD5592_REGISTER
 
 //*************************void setup*************************************
 void setup() {
@@ -1346,38 +1346,66 @@ else if (command.substring(0, 3) == "get") {
 
 //*************************reg command*************************************
     #ifdef COMMAND_READ_AD5592_REGISTER
-      else if (command.substring(0, 3) == "reg"){
+      else if (command.substring(0, 3) == "reg") {
         found = false;
-        int i = find_index_cmd_reg (command);
-//        Serial.print("found = ");
-//        Serial.println(found);
-//        Serial.print("i = ");
-//        Serial.println(i);
-        if (found){
+      
+        // Try to find the index associated with the "reg" command
+        int i = find_index_cmd_reg(command.c_str());
+      
+        // If the command was recognized and index found
+        if (found) {
+          // Read offset and coefficient from EEPROM
           double ofs = read_ofs(i);         
           double k = read_k(i);
+      
+          // Get calculation mode and isolator status from arrays
           byte calc = array_calc[i];
           bool dis_isolator = array_dis_isolator[i];
-          if (dis_isolator) {digitalWrite(EN_ISOLATOR, LOW);}
+      
+          // If isolator is enabled, disable it before reading
+          if (dis_isolator) {
+            digitalWrite(EN_ISOLATOR, LOW);
+          }
+      
+          // Read the register value from the AD5592 chip
           double Readback_Reg = Readback_Reg_AD5592(array_set_reg_CE[i], array_set_reg_gpio[i]);
-//          Serial.print("Readback_Reg = ");
-//          Serial.println(Readback_Reg);
-//          Serial.print("calc = ");
-//          Serial.println(calc);
-//          Serial.print("dis_isolator = ");
-//          Serial.println(dis_isolator);
-          if (dis_isolator) {digitalWrite(EN_ISOLATOR, LOW);}
+      
+          // If isolator is enabled, keep it disabled during processing
+          if (dis_isolator) {
+            digitalWrite(EN_ISOLATOR, LOW);
+          }
+      
+          // Check if the read value is within valid range
           if (Readback_Reg <= Vmax_AD5592) {
-            if (calc == 1){Serial.println(ofs - (Readback_Reg * k), 3);}
-            else if (calc == 2){Serial.println((Readback_Reg - ofs) * k, 3);}
-            else if (calc == 4){Serial.println((Readback_Reg / k) - ofs, 3);}
+            // Apply the selected calculation method
+            if (calc == 1) {
+              Serial.println(ofs - (Readback_Reg * k), 3);
+            }
+            else if (calc == 2) {
+              Serial.println((Readback_Reg - ofs) * k, 3);
+            }
+            else if (calc == 4) {
+              Serial.println((Readback_Reg / k) - ofs, 3);
+            }
+      
+            // Print confirmation
             print_ok();
-          }               
-          else print_error_DAC_readback();
-          if (dis_isolator) {digitalWrite(EN_ISOLATOR, HIGH);}
+          } else {
+            // If read value is invalid, print error
+            print_error_DAC_readback();
+          }
+      
+          // Re-enable isolator if it was disabled
+          if (dis_isolator) {
+            digitalWrite(EN_ISOLATOR, HIGH);
+          }
         }
-        else print_cmd_nfound();
+        else {
+          // If command not recognized, print error
+          print_cmd_nfound();
+        }
       }
+
     #endif
       //      else if (command == "fvco"){
       //        Serial.println(fvco);
@@ -1595,63 +1623,89 @@ int find_index_cmd_get_set (String command) {
 }
 
 #ifdef COMMAND_READ_AD5592_REGISTER
-  int find_index_cmd_reg (String command) {
-  //  Serial.print("command = ");
-  //  Serial.println(command);
-    int index = 0;
-    if (command == "reg.vd1") {index = 0; found = true;}
-    else if (command == "reg.vd2") {index = 1; found = true;}
-    else if (command == "reg.vd3") {index = 2; found = true;}
-    else if (command == "reg.vd4") {index = 3; found = true;}
-    else if (command == "reg.vd5") {index = 4; found = true;}
-  //  else if (command == ".") {index = 5; found = true;}
-  //  else if (command == ".") {index = 6; found = true;}
-  //  else if (command == ".") {index = 7; found = true;}
-  //  else if (command == ".") {index = 8; found = true;}
-  //  else if (command == ".") {index = 9; found = true;}
-  //  else if (command == ".") {index = 10; found = true;}
-  //  else if (command == ".") {index = 11; found = true;}
-  //  else if (command == ".") {index = 12; found = true;}
-  //  else if (command == ".") {index = 13; found = true;}
-    else if (command == "reg.ad2.6") {index = 14; found = true;}
-    else if (command == "reg.ad2.7") {index = 15; found = true;}
-    else if (command == "reg.ad3.0") {index = 16; found = true;}
-    else if (command == "reg.ad3.1") {index = 17; found = true;}
-    else if (command == "reg.ad3.2") {index = 18; found = true;}
-    else if (command == "reg.ad3.3") {index = 19; found = true;}
-    else if (command == "reg.ad3.4") {index = 20; found = true;}
-    else if (command == "reg.ad3.5") {index = 21; found = true;}
-    else if (command == "reg.ad3.6") {index = 22; found = true;}
-    else if (command == "reg.ad3.7") {index = 23; found = true;}
-    else if (command == "reg.ad4.0") {index = 24; found = true;}
-    else if (command == "reg.ad4.1") {index = 25; found = true;}
-    else if (command == "reg.ad4.2") {index = 26; found = true;}
-    else if (command == "reg.ad4.3") {index = 27; found = true;}
-  //  else if (command == ".") {index = 28; found = true;}
-  //  else if (command == ".") {index = 29; found = true;}
-  //  else if (command == ".") {index = 30; found = true;}
-  //  else if (command == ".") {index = 31; found = true;}
-  //  else if (command == ".") {index = 32; found = true;}
-  //  else if (command == ".") {index = 33; found = true;}
-  //  else if (command == ".") {index = 34; found = true;}
-  //  else if (command == ".") {index = 35; found = true;}
-  //  else if (command == ".") {index = 36; found = true;}
-  //  else if (command == ".") {index = 37; found = true;}
-  //  else if (command == ".") {index = 38; found = true;}
-  //  else if (command == ".") {index = 39; found = true;}
-    else if (command == "reg.dtx.0") {index = 40; if (true){found = true;}}
-    else if (command == "reg.dtx.1") {index = 41; if (true){found = true;}}
-    else if (command == "reg.dtx.2") {index = 42; if (true){found = true;}}
-    else if (command == "reg.dtx.3") {index = 43; if (true){found = true;}}
-    else if (command == "reg.dtx.4") {index = 44; if (true){found = true;}}
-    else if (command == "reg.dtx.5") {index = 45; if (true){found = true;}}
-    else if (command == "reg.dtx.6") {index = 46; if (true){found = true;}}
-    else if (command == "reg.dtx.7") {index = 47; if (true){found = true;}}
-  //  Serial.print("found = ");
-  //  Serial.println(found);
-  //  Serial.print("index = ");
-  //  Serial.println(index);
-    return index;
+  //  int find_index_cmd_reg (String command) {
+  //  //  Serial.print("command = ");
+  //  //  Serial.println(command);
+  //    int index = 0;
+  //    if (command == "reg.vd1") {index = 0; found = true;}
+  //    else if (command == "reg.vd2") {index = 1; found = true;}
+  //    else if (command == "reg.vd3") {index = 2; found = true;}
+  //    else if (command == "reg.vd4") {index = 3; found = true;}
+  //    else if (command == "reg.vd5") {index = 4; found = true;}
+  //  //  else if (command == ".") {index = 5; found = true;}
+  //  //  else if (command == ".") {index = 6; found = true;}
+  //  //  else if (command == ".") {index = 7; found = true;}
+  //  //  else if (command == ".") {index = 8; found = true;}
+  //  //  else if (command == ".") {index = 9; found = true;}
+  //  //  else if (command == ".") {index = 10; found = true;}
+  //  //  else if (command == ".") {index = 11; found = true;}
+  //  //  else if (command == ".") {index = 12; found = true;}
+  //  //  else if (command == ".") {index = 13; found = true;}
+  //    else if (command == "reg.ad2.6") {index = 14; found = true;}
+  //    else if (command == "reg.ad2.7") {index = 15; found = true;}
+  //    else if (command == "reg.ad3.0") {index = 16; found = true;}
+  //    else if (command == "reg.ad3.1") {index = 17; found = true;}
+  //    else if (command == "reg.ad3.2") {index = 18; found = true;}
+  //    else if (command == "reg.ad3.3") {index = 19; found = true;}
+  //    else if (command == "reg.ad3.4") {index = 20; found = true;}
+  //    else if (command == "reg.ad3.5") {index = 21; found = true;}
+  //    else if (command == "reg.ad3.6") {index = 22; found = true;}
+  //    else if (command == "reg.ad3.7") {index = 23; found = true;}
+  //    else if (command == "reg.ad4.0") {index = 24; found = true;}
+  //    else if (command == "reg.ad4.1") {index = 25; found = true;}
+  //    else if (command == "reg.ad4.2") {index = 26; found = true;}
+  //    else if (command == "reg.ad4.3") {index = 27; found = true;}
+  //  //  else if (command == ".") {index = 28; found = true;}
+  //  //  else if (command == ".") {index = 29; found = true;}
+  //  //  else if (command == ".") {index = 30; found = true;}
+  //  //  else if (command == ".") {index = 31; found = true;}
+  //  //  else if (command == ".") {index = 32; found = true;}
+  //  //  else if (command == ".") {index = 33; found = true;}
+  //  //  else if (command == ".") {index = 34; found = true;}
+  //  //  else if (command == ".") {index = 35; found = true;}
+  //  //  else if (command == ".") {index = 36; found = true;}
+  //  //  else if (command == ".") {index = 37; found = true;}
+  //  //  else if (command == ".") {index = 38; found = true;}
+  //  //  else if (command == ".") {index = 39; found = true;}
+  //    else if (command == "reg.dtx.0") {index = 40; if (true){found = true;}}
+  //    else if (command == "reg.dtx.1") {index = 41; if (true){found = true;}}
+  //    else if (command == "reg.dtx.2") {index = 42; if (true){found = true;}}
+  //    else if (command == "reg.dtx.3") {index = 43; if (true){found = true;}}
+  //    else if (command == "reg.dtx.4") {index = 44; if (true){found = true;}}
+  //    else if (command == "reg.dtx.5") {index = 45; if (true){found = true;}}
+  //    else if (command == "reg.dtx.6") {index = 46; if (true){found = true;}}
+  //    else if (command == "reg.dtx.7") {index = 47; if (true){found = true;}}
+  //  //  Serial.print("found = ");
+  //  //  Serial.println(found);
+  //  //  Serial.print("index = ");
+  //  //  Serial.println(index);
+  //    return index;
+  //  }
+  
+  
+  
+  const char* commands[] = {
+    "reg.vd1", "reg.vd2", "reg.vd3", "reg.vd4", "reg.vd5",
+    ".", ".", ".", ".", ".", ".", ".", ".", ".", // Indici 5–13
+    "reg.ad2.6", "reg.ad2.7",
+    "reg.ad3.0", "reg.ad3.1", "reg.ad3.2", "reg.ad3.3",
+    "reg.ad3.4", "reg.ad3.5", "reg.ad3.6", "reg.ad3.7",
+    "reg.ad4.0", "reg.ad4.1", "reg.ad4.2", "reg.ad4.3",
+    ".", ".", ".", ".", ".", ".", ".", ".", ".", ".", ".", ".", // Indici 28–39
+    "reg.dtx.0", "reg.dtx.1", "reg.dtx.2", "reg.dtx.3",
+    "reg.dtx.4", "reg.dtx.5", "reg.dtx.6", "reg.dtx.7"
+  };
+  
+  
+  int find_index_cmd_reg(const char* command) {
+    found = false;
+    for (int i = 0; i < 48; i++) {
+      if (strcmp(command, commands[i]) == 0) {
+        found = true;
+        return i;
+      }
+    }
+    return -1; // Non trovato
   }
 #endif
 
@@ -2121,28 +2175,30 @@ void AW_AD5592 (byte cs, byte gpio, float value){//AD5592 DAC Write then Readbac
   if (ADC0 == DAC0) {DAC_readback = true;}
 }
 
-float Readback_Reg_AD5592 (byte cs, byte gpio){//AD5592 DAC Write raw
-  SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE1));
-
-//DAC Readback Register (Reg Add 0001)
-  D15D8 = B00001000;
-  D7D0 = B00011000 | gpio;
-  digitalWrite(cs, LOW);
-  SPI.transfer(D15D8); //D15-D8 (D15|0001|3 x Reserved)
-  SPI.transfer(D7D0); //D7-D0 (3 x Reserved|DAC_RD_EN1|DAC_RD_EN0|DAC_CH_SEL2|DAC_CH_SEL1|DAC_CH_SEL0)
-  digitalWrite(cs, HIGH);
-  delay(1);
-
-  digitalWrite(cs, LOW);
-  ADC0 = (uint16_t)SPI.transfer(0x00) << 8;
-  ADC0 |= (uint16_t)SPI.transfer(0x00);
-  digitalWrite(cs, HIGH);
-  ADC0 = ADC0 & 0xFFF;
-//  Serial.print("ADC0 = ");
-//  Serial.println(ADC0);
-  float result = ((ADC0 / (float)4095) * Vref_AD5592);
-  return result;
-}
+#ifdef COMMAND_READ_AD5592_REGISTER
+  float Readback_Reg_AD5592 (byte cs, byte gpio){//AD5592 DAC Write raw
+    SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE1));
+  
+  //DAC Readback Register (Reg Add 0001)
+    D15D8 = B00001000;
+    D7D0 = B00011000 | gpio;
+    digitalWrite(cs, LOW);
+    SPI.transfer(D15D8); //D15-D8 (D15|0001|3 x Reserved)
+    SPI.transfer(D7D0); //D7-D0 (3 x Reserved|DAC_RD_EN1|DAC_RD_EN0|DAC_CH_SEL2|DAC_CH_SEL1|DAC_CH_SEL0)
+    digitalWrite(cs, HIGH);
+    delay(1);
+  
+    digitalWrite(cs, LOW);
+    ADC0 = (uint16_t)SPI.transfer(0x00) << 8;
+    ADC0 |= (uint16_t)SPI.transfer(0x00);
+    digitalWrite(cs, HIGH);
+    ADC0 = ADC0 & 0xFFF;
+  //  Serial.print("ADC0 = ");
+  //  Serial.println(ADC0);
+    float result = ((ADC0 / (float)4095) * Vref_AD5592);
+    return result;
+  }
+#endif
 
 void write_adf4108(uint32_t reg) {
   SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE0));
