@@ -939,6 +939,7 @@ void loop() {
 //          Serial.print(ADD);
 //          Serial.print("] = ");
           Serial.println(e2prom_get(ADD),3);
+          Serial.println(e2prom_read(ADD),3);
           print_ok();
         }
         else print_exc_limit();
@@ -1858,13 +1859,13 @@ void print_cmdlist() {
   
   Serial.println(F("32u4:"));
   Serial.println(F("out.set.vd[1-2-3-4-5-vco] [0->Disabled, 1->Enabled]"));
-  Serial.println(F("out.get.vd[1-2-3-4-5-vco] (read state, 0->Disabled, 1->Enabled)"));
+  Serial.println(F("out.get.vd[1-2-3-4-5-vco] (0->Disabled, 1->Enabled)"));
   Serial.println(F("idvco [read current(A)]\n"));
 //  Serial.println();
   
   Serial.println(F("AD_1:"));
   Serial.print(F("set.vd[1-2-3-4-5-vco] [")); Serial.print(VD_min); Serial.print(F(" to ")); Serial.print(VD_max); Serial.println(F(" set volt]"));
-  Serial.println(F("get.id3-4-5] (read current(A))"));
+  Serial.println(F("get.id[3-4-5] (read current(A))"));
   Serial.println();
 
   Serial.println(F("AD_2:"));
@@ -1878,8 +1879,9 @@ void print_cmdlist() {
  
   Serial.println(F("AD_4:"));
   Serial.print(F("set.ad4.[0-1-2-3] [")); Serial.print(Vif_min); Serial.print(F(" to ")); Serial.print(Vif_max); Serial.println(F(" set volt]"));
-  Serial.println(F("get.pll-lock [0-> UNLOCK, 3.3V->LOCKED]"));
-  Serial.println(F("get.ad4.[5-6-7] (read volt(V))"));
+  Serial.println(F("get.pll-lock [0 UNLOCK, 3.3V LOCKED]"));
+  Serial.println(F("get.ad4.5 (read current(A))"));
+  Serial.println(F("get.ad4.[6-7] (read volt(V))"));
   Serial.println();
 
   Serial.println(F("AD_5:"));
@@ -2354,9 +2356,11 @@ double e2prom_get (int address){
   SPI.transfer(EEPROM_READ_MEMORY_ARRAY); //transmit read opcode
   SPI.transfer((char)(address>>8));  //send MSByte address first
   SPI.transfer((char)(address)); //send LSByte address
+  Serial.print(F("read = ")); Serial.println(EEPROM_READ_MEMORY_ARRAY);
+  Serial.print(F("Address = ")); Serial.println(address);
   for (int I=0; I<4; I++){
     data[I] = SPI.transfer(0xFF);
-//    Serial.print("data ["); Serial.print(I); Serial.print("] = "); Serial.println(data[I]);
+    Serial.print(F("data [")); Serial.print(I); Serial.print(F("] = ")); Serial.println(data[I]);
   }
   digitalWrite(e2prom_CE, HIGH);
   memcpy(&result, &data, 4);
@@ -2370,6 +2374,7 @@ byte e2prom_read (int address){
   SPI.transfer((char)(address>>8));  //send MSByte address first
   SPI.transfer((char)(address)); //send LSByte address
   result = SPI.transfer(0xFF);
+  Serial.print(F("data read = ")); Serial.println(result);
   digitalWrite(e2prom_CE, HIGH);
   return result;
 }
