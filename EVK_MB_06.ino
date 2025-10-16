@@ -1899,7 +1899,7 @@ void print_cmdlist() {
   Serial.println(F("idvco [read current(A)]\n"));
   
   Serial.println(F("AD_1:"));
-  Serial.print(F("set.vd[1-2-3-4-5-vco] [")); Serial.print(VD_min); Serial.print(F(" to ")); Serial.print(VD_max); Serial.println(F(" set volt]"));
+  Serial.print(F("set.vd[1-2-3-4-5] [")); Serial.print(VD_min); Serial.print(F(" to ")); Serial.print(VD_max); Serial.println(F(" set volt]"));
   Serial.println(F("get.id[3-4-5] (read current(A))\n"));
 
   Serial.println(F("AD_2:"));
