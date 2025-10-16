@@ -409,7 +409,7 @@ union{
 } doub2arr;
 
 #define COMMAND_READ_AD5592_REGISTER
-
+//#define SERIAL_EEPROM_32K_DAUGHTER
 //*************************void setup*************************************
 void setup() {
 //  while (!Serial) {}
@@ -931,59 +931,83 @@ void loop() {
               print_exc_limit();
           }
       }
-
-      else if (command.charAt(0) == 'G' && command.charAt(1) == 'M'){
-        if ((command.substring(3).toInt()) < 32000 && (command.substring(3).toInt()) > 99){
-        int ADD = command.substring(3).toInt();
-//          Serial.print("ext eeprom get double [");
-//          Serial.print(ADD);
-//          Serial.print("] = ");
-          Serial.println(e2prom_get(ADD),3);
-          Serial.println(e2prom_read(ADD),3);
-          print_ok();
-        }
-        else print_exc_limit();
-      }
-      else if (command.charAt(0) == 'P' && command.charAt(1) == 'M'){
-        byte pos = command.indexOf(',');
-        int ADD = command.substring(3, pos).toInt();
-        double value = command.substring(pos + 1).toDouble();
-        if (ADD < 32000 && ADD > 99 && value > -1000 && value < 1000){
-          e2prom_put (ADD, value);
-//          Serial.print("ext eeprom put double[");
-//          Serial.print(ADD);
-//          Serial.print("] = ");
-//          Serial.println(value, 3);
-          print_ok();
-        }
-        else print_exc_limit();
-      }
-      else if (command.charAt(0) == 'W' && command.charAt(1) == 'M') {
-      
-          // Find the position of the comma separating address and value
-          byte pos = command.indexOf(',');
-      
-          // Extract EEPROM address from the command (between index 3 and comma)
-          int address = command.substring(3, pos).toInt();
-      
-          // Extract value to write (after the comma)
-          byte value = command.substring(pos + 1).toInt();
-      
-          // Validate address and value ranges
-          if (address < 1024 && value < 256) {
-              // Write the value to EEPROM at the specified address
-              Serial.print(F("address = ")); Serial.println(address);
-              Serial.print(F("value = ")); Serial.println(value);
-              e2prom_write(address, value); 
-      
-              // Indicate successful operation
-              print_ok();
-          } else {
-              // Address or value out of bounds, print error
-              print_exc_limit();
+      #ifdef SERIAL_EEPROM_32K_DAUGHTER
+        else if (command.charAt(0) == 'G' && command.charAt(1) == 'M'){
+          if ((command.substring(3).toInt()) < 32000 && (command.substring(3).toInt()) > 99){
+          int ADD = command.substring(3).toInt();
+  //          Serial.print("ext eeprom get double [");
+  //          Serial.print(ADD);
+  //          Serial.print("] = ");
+            //Serial.println(e2prom_get(ADD),3);
+            Serial.println(e2prom_read_stat_reg());
+            Serial.println(e2prom_read(ADD),3);
+            
+            print_ok();
           }
-      }
-
+          else print_exc_limit();
+        }
+        else if (command.charAt(0) == 'D' && command.charAt(1) == 'S'){
+  //          Serial.print("ext eeprom get double [");
+  //          Serial.print(ADD);
+  //          Serial.print("] = ");
+            //Serial.println(e2prom_get(ADD),3);
+            Serial.println(e2prom_read_stat_reg());
+            print_ok();
+        }
+        else if (command.charAt(0) == 'W' && command.charAt(1) == 'S'){
+  
+          int regist = command.substring(3).toInt();
+  //          Serial.print("ext eeprom get double [");
+  //          Serial.print(ADD);
+  //          Serial.print("] = ");
+            //Serial.println(e2prom_get(ADD),3);
+            Serial.println(regist);
+            e2prom_write_stat_reg(regist);
+  
+            
+            print_ok();
+  
+        }      
+        else if (command.charAt(0) == 'P' && command.charAt(1) == 'M'){
+          byte pos = command.indexOf(',');
+          int ADD = command.substring(3, pos).toInt();
+          double value = command.substring(pos + 1).toDouble();
+          if (ADD < 32000 && ADD > 99 && value > -1000 && value < 1000){
+            e2prom_put (ADD, value);
+  //          Serial.print("ext eeprom put double[");
+  //          Serial.print(ADD);
+  //          Serial.print("] = ");
+  //          Serial.println(value, 3);
+            print_ok();
+          }
+          else print_exc_limit();
+        }
+        else if (command.charAt(0) == 'W' && command.charAt(1) == 'M') {
+        
+            // Find the position of the comma separating address and value
+            byte pos = command.indexOf(',');
+        
+            // Extract EEPROM address from the command (between index 3 and comma)
+            int address = command.substring(3, pos).toInt();
+        
+            // Extract value to write (after the comma)
+            byte value = command.substring(pos + 1).toInt();
+        
+            // Validate address and value ranges
+            if (address < 1024 && value < 256) {
+                // Write the value to EEPROM at the specified address
+                Serial.print(F("address = ")); Serial.println(address);
+                Serial.print(F("value = ")); Serial.println(value);
+                e2prom_write(address, value); 
+        
+                // Indicate successful operation
+                print_ok();
+            } else {
+                // Address or value out of bounds, print error
+                print_exc_limit();
+            }
+        }
+      #endif
 
 //      else if (command == "VD_min"){Serial.println(VD_min); print_ok();}
 //      else if (command == "VD_max"){Serial.println(VD_max); print_ok();}
@@ -1760,18 +1784,20 @@ double read_ofs(int x) {
   // This block is currently disabled (false condition)
   // It would read from a custom memory function (e2prom_get)
   if (false) { // (x > 39)
-    ofs = e2prom_get(add_str_ofs_M + (x * 8));
-
-    // If the value is NaN, reset to 0 and store it
-    if (isnan(ofs)) {
-      ofs = 0;
-      e2prom_put(add_str_ofs_M + (x * 8), ofs);
-    }
-    // If the value is out of valid range, reset to 0 and store it
-    else if (ofs < -1000 || ofs > 1000) {
-      ofs = 0;
-      e2prom_put(add_str_ofs_M + (x * 8), ofs);
-    }
+    #ifdef SERIAL_EEPROM_32K_DAUGHTER
+      ofs = e2prom_get(add_str_ofs_M + (x * 8));
+  
+      // If the value is NaN, reset to 0 and store it
+      if (isnan(ofs)) {
+        ofs = 0;
+        e2prom_put(add_str_ofs_M + (x * 8), ofs);
+      }
+      // If the value is out of valid range, reset to 0 and store it
+      else if (ofs < -1000 || ofs > 1000) {
+        ofs = 0;
+        e2prom_put(add_str_ofs_M + (x * 8), ofs);
+      }
+    #endif
   }
   // Default block: read from standard EEPROM
   else {
@@ -1818,18 +1844,20 @@ double read_k(int x) {
   // This block is currently disabled (false condition)
   // It would read from a custom memory function (e2prom_get)
   if (false) { // (x > 39)
-    k = e2prom_get(add_str_k_M + (x * 8));
-
-    // If the value is NaN, reset to 1 and store it
-    if (isnan(k)) {
-      k = 1;
-      e2prom_put(add_str_k_M + (x * 8), k);
-    }
-    // If the value is out of valid range, reset to 1 and store it
-    else if (k < -1000 || k > 1000) {
-      k = 1;
-      e2prom_put(add_str_k_M + (x * 8), k);
-    }
+    #ifdef SERIAL_EEPROM_32K_DAUGHTER
+      k = e2prom_get(add_str_k_M + (x * 8));
+  
+      // If the value is NaN, reset to 1 and store it
+      if (isnan(k)) {
+        k = 1;
+        e2prom_put(add_str_k_M + (x * 8), k);
+      }
+      // If the value is out of valid range, reset to 1 and store it
+      else if (k < -1000 || k > 1000) {
+        k = 1;
+        e2prom_put(add_str_k_M + (x * 8), k);
+      }
+    #endif
   }
   // Default block: read from standard EEPROM
   else {
@@ -1855,86 +1883,49 @@ double read_k(int x) {
 void print_cmdlist() {
   Serial.println();
   Serial.println(F("*******command list**********"));
-//  Serial.println(F("error (error_code_list)"));
   Serial.println(F("F (read firmware version)"));
   Serial.println(F("S (read serial number)"));
   Serial.println(F("WE xxxx,xx = write byte eeprom ADD[0 to 1023],VALUE[0 to 255]"));
   Serial.println(F("RE xx = read byte eeprom ADD[0 to 1023]"));
   Serial.println(F("PE xxxx,xxxx = put double eeprom ADD[100 to 1023],VALUE[-1000 to 1000]"));
-  Serial.println(F("GE xx = get double eeprom ADD[100 to 1023]"));
-//  Serial.println(F("VD_min (volt)"));
-//  Serial.println(F("VD_max (volt)"));
-//  Serial.println(F("VgGAAS_min (volt)"));
-//  Serial.println(F("Vc_SIGE_max (volt)"));
-//  Serial.println(F("Vif_min (volt)"));
-//  Serial.println(F("Vif_max (volt)"));
-//  Serial.println(F("Vref_cloop_min (volt)"));
-//  Serial.println(F("Vref_cloop_max (volt)"));
-//  Serial.println(F("Vg_pa_min (volt)"));
-//  Serial.println(F("Vg_pa_max (volt)"));
-  Serial.println();
+  Serial.println(F("GE xx = get double eeprom ADD[100 to 1023]\n"));
 
   Serial.println(F("PLL ADF4108:"));
-  Serial.println(F("fvco [1000 to 8000 (MHz)]"));
-//  Serial.println(F("ADF4108_REF [1 to 255 (MHz)]"));
-//  Serial.println(F("ADF4108_wREF_Reg [after command send 3 bytes for Ref_Reg + 0xFF 0XFE 0xFD]"));
-//  Serial.println(F("ADF4108_wAB_Reg [after command send 3 bytes for AB_Reg + 0xFF 0XFE 0xFD]"));
-//  Serial.println(F("ADF4108_wFUNCT_Reg [after command send 3 bytes for FUNCT_Reg + 0xFF 0XFE 0xFD]"));
-//  Serial.println(F("ADF4108_wINIT_Reg [after command send 3 bytes for INIT_Reg + 0xFF 0XFE 0xFD]"));
-  Serial.println();
+  Serial.println(F("fvco [1000 to 8000 (MHz)]\n"));
   
   Serial.println(F("32u4:"));
   Serial.println(F("out.set.vd[1-2-3-4-5-vco] [0->Disabled, 1->Enabled]"));
   Serial.println(F("out.get.vd[1-2-3-4-5-vco] (0->Disabled, 1->Enabled)"));
   Serial.println(F("idvco [read current(A)]\n"));
-//  Serial.println();
   
   Serial.println(F("AD_1:"));
   Serial.print(F("set.vd[1-2-3-4-5-vco] [")); Serial.print(VD_min); Serial.print(F(" to ")); Serial.print(VD_max); Serial.println(F(" set volt]"));
-  Serial.println(F("get.id[3-4-5] (read current(A))"));
-  Serial.println();
+  Serial.println(F("get.id[3-4-5] (read current(A))\n"));
 
   Serial.println(F("AD_2:"));
-  Serial.println(F("get.vd[1-2-3-4-5-temp] (read volt(V))"));
-  Serial.print(F("set.ad2.6 [")); Serial.print(VgGAAS_min); Serial.print(F(" to ")); Serial.print(Vc_SIGE_max); Serial.println(F(" set volt]"));
-  Serial.println();
+  Serial.println(F("get.vd[1-2-3-4-5] (read volt(V))"));
+  Serial.println(F("get.temp [Celsius]"));
+  Serial.print(F("set.ad2.6 [")); Serial.print(VgGAAS_min); Serial.print(F(" to ")); Serial.print(Vc_SIGE_max); Serial.println(F(" set volt]\n"));
 
   Serial.println(F("AD_3:"));
-  Serial.print(F("set.ad3.[0 to 7] [")); Serial.print(VgGAAS_min); Serial.print(F(" to ")); Serial.print(Vc_SIGE_max); Serial.println(F(" set volt]"));
-  Serial.println();
+  Serial.print(F("set.ad3.[0 to 7] [")); Serial.print(VgGAAS_min); Serial.print(F(" to ")); Serial.print(Vc_SIGE_max); Serial.println(F(" set volt]\n"));
  
   Serial.println(F("AD_4:"));
   Serial.print(F("set.ad4.[0-1-2-3] [")); Serial.print(Vif_min); Serial.print(F(" to ")); Serial.print(Vif_max); Serial.println(F(" set volt]"));
   Serial.println(F("get.pll-lock [0 UNLOCK, 3.3V LOCKED]"));
   Serial.println(F("get.ad4.5 (read current(A))"));
-  Serial.println(F("get.ad4.[6-7] (read volt(V))"));
-  Serial.println();
+  Serial.println(F("get.ad4.[6-7] (read volt(V))\n"));
 
   Serial.println(F("AD_5:"));
-  Serial.println(F("get.ad5.[0 to 7] (read volt(V))"));
-  Serial.println();
+  Serial.println(F("get.ad5.[0 to 7] (read volt(V))\n"));
 
   Serial.println(F("AD_6:"));
-//  Serial.println(F("cbl1.2 [read state]"));
-//  Serial.println(F("cbl1.1 [read state]"));
-//  Serial.println(F("cbl2.1 [read state]"));
-//  Serial.println(F("cbl2.2 [read state]"));
-  Serial.println(F("db.type [return type of DB]"));
-//  Serial.println(F("mv.en [read state]"));
-//  Serial.println(F("m3v.en [read state]"));
-  Serial.println();
+  Serial.println(F("db.type [return type of DB]\n"));
 
   Serial.println(F("AD5592_DTX:"));
   Serial.print(("set.dtx.[0-1-2-3]] [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
-//  Serial.print(("set.dtx.1 [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
-//  Serial.print(("set.dtx.2 [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
-//  Serial.print(("set.dtx.3 [")); Serial.print(Vref_cloop_min); Serial.print(F(" to ")); Serial.print(Vref_cloop_max); Serial.println(F(" set volt]"));
   Serial.print(("set.dtx.[4-5-6-7] [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
-//  Serial.print(("set.dtx.5 [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
-//  Serial.print(("set.dtx.6 [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
-//  Serial.print(("set.dtx.7 [")); Serial.print(Vg_pa_min); Serial.print(F(" to ")); Serial.print(Vg_pa_max); Serial.println(F(" set volt]"));
 
-  Serial.println(F("*********************"));
 }
 //void print_error_code_list() {
 //  for (int i=700; i<930; i++){
@@ -2374,52 +2365,35 @@ void reg_calc() {
 //  Serial.print("INIT_Reg = ");
 //  Serial.println(INIT_Reg, HEX);
 }
-//
-//double e2prom_get (int address){
-//  byte data[4];
-//  double result = 10;
-//  digitalWrite(e2prom_CE, LOW);
-//  SPI.transfer(EEPROM_READ_MEMORY_ARRAY); //transmit read opcode
-//  SPI.transfer((char)(address>>8));  //send MSByte address first
-//  SPI.transfer((char)(address)); //send LSByte address
-//  //Serial.print(F("read = ")); Serial.println(EEPROM_READ_MEMORY_ARRAY);
-//  //Serial.print(F("Address = ")); Serial.println(address);
-//  for (int I=0; I<4; I++){
-//    data[I] = SPI.transfer(0xFF);
-//    Serial.print(F("data [")); Serial.print(I); Serial.print(F("] = ")); Serial.println(data[I]);
-//  }
-//  digitalWrite(e2prom_CE, HIGH);
-//  memcpy(&result, &data, 4);
-//  return result;
-//}
 
-double e2prom_get(int address) {
-  // Create a buffer to hold the 4 bytes read from EEPROM
-  byte data[4];
-
-  // Initialize the result variable (not strictly necessary here)
-  double result;
-
-  // Enable the EEPROM chip by pulling CE (Chip Enable) low
-  digitalWrite(e2prom_CE, LOW);
-
-  // Send the READ opcode to the EEPROM
-  SPI.transfer(EEPROM_READ_MEMORY_ARRAY);
-
-  // Send the 16-bit address: first the most significant byte (MSB)
-  SPI.transfer((uint8_t)(address >> 8));
-
-  // Then the least significant byte (LSB)
-  SPI.transfer((uint8_t)(address & 0xFF));
-
-  // Read 4 bytes from EEPROM and store them in the data array
-  for (int i = 0; i < 4; i++) {
-    data[i] = SPI.transfer(0xFF); // Dummy byte to trigger SPI read
-    Serial.print(F("data["));
-    Serial.print(i);
-    Serial.print(F("] = "));
-    Serial.println(data[i]); // Debug output
-  }
+#ifdef SERIAL_EEPROM_32K_DAUGHTER
+  double e2prom_get(int address) {
+    // Create a buffer to hold the 4 bytes read from EEPROM
+    byte data[4];
+  
+    // Initialize the result variable (not strictly necessary here)
+    double result;
+  
+    // Enable the EEPROM chip by pulling CE (Chip Enable) low
+    digitalWrite(e2prom_CE, LOW);
+  
+    // Send the READ opcode to the EEPROM
+    SPI.transfer(EEPROM_READ_MEMORY_ARRAY);
+  
+    // Send the 16-bit address: first the most significant byte (MSB)
+    SPI.transfer((uint8_t)(address >> 8));
+  
+    // Then the least significant byte (LSB)
+    SPI.transfer((uint8_t)(address & 0xFF));
+  
+    // Read 4 bytes from EEPROM and store them in the data array
+    for (int i = 0; i < 4; i++) {
+      data[i] = SPI.transfer(0xFF); // Dummy byte to trigger SPI read
+      Serial.print(F("data["));
+      Serial.print(i);
+      Serial.print(F("] = "));
+      Serial.println(data[i]); // Debug output
+    }
 
   // Disable the EEPROM chip
   digitalWrite(e2prom_CE, HIGH);
@@ -2431,216 +2405,170 @@ double e2prom_get(int address) {
   // Return the reconstructed double value
   return result;
 }
-//
-//byte e2prom_read (int address){
-//  byte result;
-//  digitalWrite(e2prom_CE, LOW);
-//  SPI.transfer(EEPROM_READ_MEMORY_ARRAY); //transmit read opcode
-//  SPI.transfer((char)(address>>8));  //send MSByte address first
-//  SPI.transfer((char)(address)); //send LSByte address
-//  result = SPI.transfer(0xFF);
-//  Serial.print(F("data read = ")); Serial.println(result);
-//  digitalWrite(e2prom_CE, HIGH);
-//  return result;
-//}
 
-byte e2prom_read(int address) {
-  byte result; // Variable to store the byte read from EEPROM
-
-  // Enable the EEPROM chip by pulling CE (Chip Enable) low
-  digitalWrite(e2prom_CE, LOW);
-
-  // Send the READ opcode to the EEPROM
-  SPI.transfer(EEPROM_READ_MEMORY_ARRAY);
-
-  // Send the 16-bit address: first the most significant byte (MSB)
-  SPI.transfer((uint8_t)(address >> 8));
-
-  // Then the least significant byte (LSB)
-  SPI.transfer((uint8_t)(address & 0xFF));
-
-  // Read one byte from EEPROM by sending a dummy byte (0xFF)
-  result = SPI.transfer(0xFF);
-
-  // Print the read value for debugging
-  Serial.print(F("data read = "));
-  Serial.println(result);
-
-  // Disable the EEPROM chip
-  digitalWrite(e2prom_CE, HIGH);
-
-  // Return the byte read from EEPROM
-  return result;
-}
-
-//void e2prom_write (int address, byte data){
-//  start_add_page = ((int)address/page_size) * page_size;
-//  byte buffer_read[page_size];
-//
-//  digitalWrite(e2prom_CE, LOW);
-//  SPI.transfer(EEPROM_READ_MEMORY_ARRAY); //transmit read opcode
-//  SPI.transfer((char)(start_add_page>>8));  //send MSByte address first
-//  SPI.transfer((char)(start_add_page)); //send LSByte address
-//  for (int I=0; I<page_size; I++){
-//    buffer_read[I] = SPI.transfer(0xFF);
-//  }
-//  digitalWrite(e2prom_CE, HIGH);
-////  delay(10);
-//  
-//  buffer_read[address - start_add_page] = data;
-//  e2prom_write_page (start_add_page, buffer_read);
-//}
-
-
-void e2prom_write(int address, byte data) {
-  // Enable write operations on the EEPROM
-  digitalWrite(e2prom_CE, LOW);
-  SPI.transfer(EEPROM_WRITE_ENABLE); // Send Write Enable command
-  digitalWrite(e2prom_CE, HIGH);
-  delay(5); // Wait for write enable to take effect
-
-  // Begin the byte write sequence
-  digitalWrite(e2prom_CE, LOW);
-  SPI.transfer(EEPROM_WRITE_MEMORY_ARRAY); // Send Write command
-
-  // Send the 16-bit address: MSB first, then LSB
-  SPI.transfer((uint8_t)(address >> 8));   // Most significant byte
-  SPI.transfer((uint8_t)(address & 0xFF)); // Least significant byte
-
-  // Send the single byte to be written
-  SPI.transfer(data);
-
-  // End communication
-  digitalWrite(e2prom_CE, HIGH);
-
-  // Wait for the write cycle to complete (check datasheet for timing)
-  delay(10); // Typical write cycle time for 25AA320 is ~5 ms
-}
-
-//void e2prom_put (int address, double data){
-//  start_add_page = ((int)address/page_size) * page_size;
-//  byte buffer_read[page_size];
-//
-//  memset(buffer_read, 0, sizeof(buffer_read));
-//  
-//  for (int I=0; I<page_size; I++){
-//    digitalWrite(e2prom_CE, LOW);
-//    SPI.transfer(EEPROM_READ_MEMORY_ARRAY); //transmit read opcode
-//    SPI.transfer((char)((start_add_page+I)>>8));  //send MSByte address first
-//    SPI.transfer((char)(start_add_page+I)); //send LSByte address
-//    buffer_read[I] = SPI.transfer(0xFF);
-//    Serial.print(F("array = ")); Serial.print(buffer_read[I]);
-//    digitalWrite(e2prom_CE, HIGH);
-//    delay(5);
-//  }
-//  Serial.println();
-//  doub2arr.num = data;
-////  Serial.print("doub2arr.num = "); Serial.println(doub2arr.num, 3);
-//  //buffer_read[address - start_add_page] = data;
-//  for (int i=0; i<4; i++){
-//    buffer_read[address - start_add_page + i] = doub2arr.array[i];
-//    Serial.print(F("doub2arr.array = ")); Serial.println(doub2arr.array[i]);
-//  }
-//
-//  Serial.println();
-//
-//  for (int i=0; i<page_size; i++){
-//    buffer_read[start_add_page + i] = doub2arr.array[i];
-//    Serial.print(F("array = ")); Serial.println(doub2arr.array[i]);
-//  }  
-//
-//  Serial.print(F("address = ")); Serial.print(address);
-//  Serial.print(F("start_add_page = ")); Serial.print(start_add_page);     
-//  //e2prom_write_page (start_add_page, buffer_read);
-//}
-
-
-void e2prom_put(int address, double data) {
-  start_add_page = ((int)address / page_size) * page_size;
-  byte buffer_read[page_size];
-
-  memset(buffer_read, 0, sizeof(buffer_read));
-
-  for (int I = 0; I < page_size; I++) {
-    digitalWrite(e2prom_CE, LOW);
-    SPI.transfer(EEPROM_READ_MEMORY_ARRAY);
-    SPI.transfer((char)((start_add_page + I) >> 8));
-    SPI.transfer((char)(start_add_page + I));
-    buffer_read[I] = SPI.transfer(0xFF);
-    digitalWrite(e2prom_CE, HIGH);
-    delay(5);
-  }
-
-//  for (int i=0; i<page_size; i++){
-//    Serial.print(F("array read[")); Serial.print(i); Serial.print(F("] = ")); Serial.println(buffer_read[i]);
-//  } 
+  byte e2prom_read(int address) {
+    byte result; // Variable to store the byte read from EEPROM
   
-  doub2arr.num = data;
-
-  for (int i = 0; i < 4; i++) {
-    buffer_read[address - start_add_page + i] = doub2arr.array[i];
+    // Enable the EEPROM chip by pulling CE (Chip Enable) low
+    digitalWrite(e2prom_CE, LOW);
+  
+    // Send the READ opcode to the EEPROM
+    SPI.transfer(EEPROM_READ_MEMORY_ARRAY);
+  
+    // Send the 16-bit address: first the most significant byte (MSB)
+    SPI.transfer((uint8_t)(address >> 8));
+  
+    // Then the least significant byte (LSB)
+    SPI.transfer((uint8_t)(address & 0xFF));
+  
+    // Read one byte from EEPROM by sending a dummy byte (0xFF)
+    result = SPI.transfer(0xFF);
+  
+    digitalWrite(e2prom_CE, HIGH);
+    
+    // Print the read value for debugging
+    Serial.print(F("data read = "));
+    Serial.println(result);
+  
+    // Disable the EEPROM chip
+  
+    // Return the byte read from EEPROM
+    return result;
   }
 
-//  for (int i=0; i<page_size; i++){
-//    Serial.print(F("array changed[")); Serial.print(i); Serial.print(F("] = ")); Serial.println(buffer_read[i]);
-//  }  
-
-  //e2prom_write_page(start_add_page, buffer_read);
-
-}
-
-
-//void e2prom_write_page (int address, byte data_page[page_size]){
-//  digitalWrite(e2prom_CE ,LOW);
-//  SPI.transfer(EEPROM_WRITE_ENABLE); //write enable
-//  digitalWrite(e2prom_CE, HIGH);
-//  delay(5);
-//  byte buffer_write[page_size];
-//  for (int i=0; i<page_size; i++){
-//    buffer_write[i] = data_page[i];
-//  }
-//  digitalWrite(e2prom_CE, LOW);
-//  SPI.transfer(EEPROM_WRITE_MEMORY_ARRAY); //write instruction
-//  SPI.transfer((char)(address>>8));  //send MSByte address first
-//  SPI.transfer((char)(address)); //send LSByte address
-//  for (int I=0; I<page_size; I++){
-//    SPI.transfer(buffer_write[I]);//write data byte
-//    delay(5);
-//  }
-//  digitalWrite(e2prom_CE, HIGH);
-//  //wait for eeprom to finish writing
-//  delay(100);
-//}
-
-// Scrive una pagina di dati nella EEPROM via SPI
-void e2prom_write_page(int address, const byte data_page[page_size]) {
-  // Abilita la scrittura sulla EEPROM
-  digitalWrite(e2prom_CE, LOW);
-  SPI.transfer(EEPROM_WRITE_ENABLE);
-  digitalWrite(e2prom_CE, HIGH);
-  delay(5); // attesa minima per stabilità
-  // Copia i dati in un buffer locale (opzionale se data_page è già sicuro)
-  byte buffer_write[page_size];
-  memcpy(buffer_write, data_page, page_size);
-
-  // Inizio della scrittura nella memoria
-  digitalWrite(e2prom_CE, LOW);
-  SPI.transfer(EEPROM_WRITE_MEMORY_ARRAY); // comando di scrittura
-
-  // Invio dell'indirizzo (MSB prima, poi LSB)
-  SPI.transfer((uint8_t)(address >> 8));   // byte più significativo
-  SPI.transfer((uint8_t)(address & 0xFF)); // byte meno significativo
-
-  // Scrittura dei dati byte per byte
-  for (int i = 0; i < page_size; i++) {
-    SPI.transfer(buffer_write[i]);
+  byte e2prom_read_stat_reg(void) {
+    byte result; // Variable to store the byte read from EEPROM
+  
+    // Enable the EEPROM chip by pulling CE (Chip Enable) low
+    digitalWrite(e2prom_CE, LOW);
+  
+    delayMicroseconds(10);
+  
+    // Send the READ opcode to the EEPROM
+    SPI.transfer(5);
+  
+    // Read one byte from EEPROM by sending a dummy byte (0xFF)
+    result = SPI.transfer(0);
+  
+    digitalWrite(e2prom_CE, HIGH);
+    
+    // Print the read value for debugging
+    Serial.print(F("data read stat_reg = "));
+    //Serial.println(result);
+  
+    // Disable the EEPROM chip
+  
+    // Return the byte read from EEPROM
+    return result;
   }
 
-  digitalWrite(e2prom_CE, HIGH);
 
-  // Attesa per completamento scrittura (valore da datasheet)
-  delay(100);
-}
+  byte e2prom_write_stat_reg(int regist) {
+    byte result; // Variable to store the byte read from EEPROM
+  
+    // Abilita la scrittura
+    digitalWrite(e2prom_CE, LOW);
+    delayMicroseconds(10);
+  
+    SPI.transfer(0x06); // WREN
+    digitalWrite(e2prom_CE, HIGH);
+    delayMicroseconds(1);
+  
+  
+    // Enable the EEPROM chip by pulling CE (Chip Enable) low
+    digitalWrite(e2prom_CE, LOW);
+  
+    delayMicroseconds(10);
+  
+    // Send the READ opcode to the EEPROM
+    SPI.transfer(1);
+  
+    // Read one byte from EEPROM by sending a dummy byte (0xFF)
+    SPI.transfer(regist);
+  
+    digitalWrite(e2prom_CE, HIGH);
+    delayMicroseconds(1);
+  }
+
+  void e2prom_write(int address, byte data) {
+    // Enable write operations on the EEPROM
+    digitalWrite(e2prom_CE, LOW);
+    SPI.transfer(EEPROM_WRITE_ENABLE); // Send Write Enable command
+    digitalWrite(e2prom_CE, HIGH);
+    delay(5); // Wait for write enable to take effect
+  
+    // Begin the byte write sequence
+    digitalWrite(e2prom_CE, LOW);
+    SPI.transfer(EEPROM_WRITE_MEMORY_ARRAY); // Send Write command
+  
+    // Send the 16-bit address: MSB first, then LSB
+    SPI.transfer((uint8_t)(address >> 8));   // Most significant byte
+    SPI.transfer((uint8_t)(address & 0xFF)); // Least significant byte
+  
+    // Send the single byte to be written
+    SPI.transfer(data);
+  
+    // End communication
+    digitalWrite(e2prom_CE, HIGH);
+  
+    // Wait for the write cycle to complete (check datasheet for timing)
+    delay(10); // Typical write cycle time for 25AA320 is ~5 ms
+  }
+  
+  void e2prom_put(int address, double data) {
+    start_add_page = ((int)address / page_size) * page_size;
+    byte buffer_read[page_size];
+  
+    memset(buffer_read, 0, sizeof(buffer_read));
+  
+    for (int I = 0; I < page_size; I++) {
+      digitalWrite(e2prom_CE, LOW);
+      SPI.transfer(EEPROM_READ_MEMORY_ARRAY);
+      SPI.transfer((char)((start_add_page + I) >> 8));
+      SPI.transfer((char)(start_add_page + I));
+      buffer_read[I] = SPI.transfer(0xFF);
+      digitalWrite(e2prom_CE, HIGH);
+      delay(5);
+    }
+  
+    doub2arr.num = data;
+  
+    for (int i = 0; i < 4; i++) {
+      buffer_read[address - start_add_page + i] = doub2arr.array[i];
+    }
+  
+  }
+
+  // Scrive una pagina di dati nella EEPROM via SPI
+  void e2prom_write_page(int address, const byte data_page[page_size]) {
+    // Abilita la scrittura sulla EEPROM
+    digitalWrite(e2prom_CE, LOW);
+    SPI.transfer(EEPROM_WRITE_ENABLE);
+    digitalWrite(e2prom_CE, HIGH);
+    delay(5); // attesa minima per stabilità
+    // Copia i dati in un buffer locale (opzionale se data_page è già sicuro)
+    byte buffer_write[page_size];
+    memcpy(buffer_write, data_page, page_size);
+  
+    // Inizio della scrittura nella memoria
+    digitalWrite(e2prom_CE, LOW);
+    SPI.transfer(EEPROM_WRITE_MEMORY_ARRAY); // comando di scrittura
+  
+    // Invio dell'indirizzo (MSB prima, poi LSB)
+    SPI.transfer((uint8_t)(address >> 8));   // byte più significativo
+    SPI.transfer((uint8_t)(address & 0xFF)); // byte meno significativo
+  
+    // Scrittura dei dati byte per byte
+    for (int i = 0; i < page_size; i++) {
+      SPI.transfer(buffer_write[i]);
+    }
+  
+    digitalWrite(e2prom_CE, HIGH);
+  
+    // Attesa per completamento scrittura (valore da datasheet)
+    delay(100);
+  }
+#endif
 
 //bool e2prom_is_connect(){
 //  digitalWrite(e2prom_CE ,LOW);
